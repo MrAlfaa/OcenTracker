@@ -11,6 +11,12 @@ interface SidebarProps {
 const Sidebar = ({ isOpen, isMobileOpen, toggleSidebar, closeMobileMenu }: SidebarProps) => {
   const location = useLocation();
   const [userRole, setUserRole] = useState<string>('');
+  const [userInfo, setUserInfo] = useState({
+    firstName: '',
+    lastName: '',
+    email: '',
+    role: ''
+  });
   
   useEffect(() => {
     // Get user role from localStorage
@@ -19,6 +25,14 @@ const Sidebar = ({ isOpen, isMobileOpen, toggleSidebar, closeMobileMenu }: Sideb
       try {
         const decoded = JSON.parse(atob(token.split('.')[1]));
         setUserRole(decoded.role);
+        
+        // Also set user info
+        setUserInfo({
+          firstName: decoded.firstName || 'Admin',
+          lastName: decoded.lastName || 'User',
+          email: decoded.email || 'admin@oceantracker.com',
+          role: decoded.role || 'admin'
+        });
       } catch (error) {
         console.error('Error decoding token:', error);
       }
@@ -157,12 +171,15 @@ const Sidebar = ({ isOpen, isMobileOpen, toggleSidebar, closeMobileMenu }: Sideb
         <div className={`absolute bottom-0 w-full p-4 ${isOpen ? 'text-left' : 'text-center'}`}>
           <div className="flex items-center">
             <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center">
-              <span className="text-white font-semibold">A</span>
+              <span className="text-white font-semibold">
+                {userInfo.firstName.charAt(0)}
+              </span>
             </div>
             {isOpen && (
               <div className="ml-3">
-                <p className="text-sm font-medium text-white">Admin User</p>
-                <p className="text-xs text-blue-200">admin@oceantracker.com</p>
+                <p className="text-sm font-medium text-white">{userInfo.firstName} {userInfo.lastName}</p>
+                <p className="text-xs text-blue-200">{userInfo.email}</p>
+                <p className="text-xs text-blue-200 capitalize">Role: {userInfo.role}</p>
               </div>
             )}
           </div>
@@ -229,11 +246,14 @@ const Sidebar = ({ isOpen, isMobileOpen, toggleSidebar, closeMobileMenu }: Sideb
           <div className="absolute bottom-0 w-full p-4">
             <div className="flex items-center">
               <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center">
-                <span className="text-white font-semibold">A</span>
+                <span className="text-white font-semibold">
+                  {userInfo.firstName.charAt(0)}
+                </span>
               </div>
               <div className="ml-3">
-                <p className="text-sm font-medium text-white">Admin User</p>
-                <p className="text-xs text-blue-200">admin@oceantracker.com</p>
+                <p className="text-sm font-medium text-white">{userInfo.firstName} {userInfo.lastName}</p>
+                <p className="text-xs text-blue-200">{userInfo.email}</p>
+                <p className="text-xs text-blue-200 capitalize">Role: {userInfo.role}</p>
               </div>
             </div>
           </div>

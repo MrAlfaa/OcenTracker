@@ -45,7 +45,8 @@ const Login = ({ onLoginSuccess }: LoginProps) => {
       }
       
       // Store token in localStorage
-      localStorage.setItem('token', response.data.token);
+      const { token, user } = response.data;
+      localStorage.setItem('token', token);
       
       // Call the onLoginSuccess callback if provided
       if (onLoginSuccess) {
