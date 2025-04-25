@@ -8,7 +8,7 @@ export interface IUser extends Document {
   firstName: string;
   lastName: string;
   company?: string;
-  role: 'user' | 'admin';
+  role: 'user' | 'admin' | 'superAdmin';
   createdAt: Date;
   comparePassword(candidatePassword: string): Promise<boolean>;
 }
@@ -47,7 +47,7 @@ const UserSchema = new Schema<IUser>({
   },
   role: {
     type: String,
-    enum: ['user', 'admin'],
+    enum: ['user', 'admin', 'superAdmin'],
     default: 'user',
   },
   createdAt: {

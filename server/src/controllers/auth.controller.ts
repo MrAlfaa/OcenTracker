@@ -121,3 +121,65 @@ export const getCurrentUser = async (req: Request, res: Response) => {
     res.status(500).json({ message: 'Server error' });
   }
 };
+
+// Check if super admin exists
+export const checkSuperAdminExists = async (req: Request, res: Response) => {
+  try {
+    const superAdmin = await User.findOne({ role: 'superAdmin' });
+    console.log('Super admin check:', !!superAdmin); // Add logging
+    res.json({ exists: !!superAdmin });
+  } catch (error) {
+    console.error('Check super admin error:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
+// Create super admin
+export const createSuperAdmin = async (req: Request, res: Response) => {
+  try {
+    const { email, password, firstName, lastName } = req.body;
+
+    // Check if super admin already exists
+    const existingSuperAdmin = await User.findOne({ role: 'superAdmin' });
+    if (existingSuperAdmin) {
+      return res.status(400).json({ message: 'Super admin already exists' });
+    }
+
+    // Get a unique userID with 4 digits format
+    const userID = await getNextUserID();
+
+    // Create super admin
+    const superAdmin = new User({
+      userID,
+      email,
+      password,
+      firstName,
+      lastName,
+      role: 'superAdmin',
+    });
+
+    await superAdmin.save();
+
+    // Generate JWT token
+    const token = jwt.sign(
+      { id: superAdmin._id, email: superAdmin.email, role: superAdmin.role, userID: superAdmin.userID },
+      process.env.JWT_SECRET as string,
+      { expiresIn: '7d' }
+    );
+
+    res.status(201).json({
+      token,
+      user: {
+        id: superAdmin._id,
+        userID: superAdmin.userID,
+        email: superAdmin.email,
+        firstName: superAdmin.firstName,
+        lastName: superAdmin.lastName,
+        role: superAdmin.role,
+      },
+    });
+  } catch (error) {
+    console.error('Create super admin error:', error);
+    res.status(500).json({ message: 'Server error during super admin creation' });
+  }
+};
