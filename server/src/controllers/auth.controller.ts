@@ -3,14 +3,16 @@ import jwt from 'jsonwebtoken';
 import User from '../models/user.model';
 import Counter from '../models/counter.model'; // Import the counter model
 
-// Function to get the next userID
-const getNextUserID = async (): Promise<number> => {
+// Function to get the next userID with 4 digits format (0001, 0002, etc.)
+const getNextUserID = async (): Promise<string> => {
   const counter = await Counter.findByIdAndUpdate(
     { _id: 'userID' },
     { $inc: { seq: 1 } },
     { new: true, upsert: true }
   );
-  return counter.seq;
+  
+  // Format the number to have 4 digits with leading zeros
+  return counter.seq.toString().padStart(4, '0');
 };
 
 // Register a new user
@@ -24,7 +26,7 @@ export const register = async (req: Request, res: Response) => {
       return res.status(400).json({ message: 'User already exists with this email' });
     }
 
-    // Get a unique userID
+    // Get a unique userID with 4 digits format
     const userID = await getNextUserID();
 
     // Create new user with userID
