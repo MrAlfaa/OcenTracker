@@ -50,10 +50,13 @@ const AdminInitializer = () => {
         }
       );
 
-      // Store token in localStorage
-      localStorage.setItem('token', response.data.token);
+      // Show success message (optional)
+      alert('Super admin created successfully! Please login to continue.');
       
-      // Navigate to the dashboard
+      // Clear any existing token to ensure clean login state
+      localStorage.removeItem('token');
+      
+      // Navigate to the login page
       navigate('/login');
     } catch (err: any) {
       setError(err.response?.data?.message || 'An error occurred during setup');

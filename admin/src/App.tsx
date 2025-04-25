@@ -14,15 +14,6 @@ import './App.css'
 // API URL constant
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000'
 
-// Create a ProtectedRoute component
-const ProtectedRoute = ({ children }: { children: React.ReactElement }) => {
-  const token = localStorage.getItem('token')
-  if (!token) {
-    return <Navigate to="/login" replace />
-  }
-  return children
-}
-
 function App() {
   const [sidebarOpen, setSidebarOpen] = useState(true)
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
@@ -30,18 +21,13 @@ function App() {
   const [superAdminExists, setSuperAdminExists] = useState(false)
   const [authenticated, setAuthenticated] = useState(false)
 
+  // Check if super admin exists when the app loads
   useEffect(() => {
     const checkSuperAdmin = async () => {
       try {
-        // Fixed API URL reference
         const response = await axios.get(`${API_URL}/api/auth/check-super-admin`)
         console.log('Super admin check response:', response.data)
         setSuperAdminExists(response.data.exists)
-        
-        // Check if user is authenticated
-        const token = localStorage.getItem('token')
-        setAuthenticated(!!token)
-        
         setLoading(false)
       } catch (error) {
         console.error('Error checking super admin:', error)
@@ -50,7 +36,16 @@ function App() {
     }
 
     checkSuperAdmin()
+    
+    // Clear any existing token when the app loads
+    localStorage.removeItem('token')
+    setAuthenticated(false)
   }, [])
+
+  // This function will be passed to the Login component
+  const handleLoginSuccess = () => {
+    setAuthenticated(true)
+  }
 
   const toggleSidebar = () => {
     setSidebarOpen(!sidebarOpen)
@@ -84,10 +79,10 @@ function App() {
   return (
     <Router>
       <Routes>
-        <Route path="/login" element={<Login />} />
+        <Route path="/login" element={<Login onLoginSuccess={handleLoginSuccess} />} />
         
         <Route path="/" element={
-          <ProtectedRoute>
+          authenticated ? (
             <div className="flex h-screen bg-gray-100">
               <Sidebar 
                 isOpen={sidebarOpen} 
@@ -107,11 +102,13 @@ function App() {
                 </main>
               </div>
             </div>
-          </ProtectedRoute>
+          ) : (
+            <Navigate to="/login" replace />
+          )
         } />
         
         <Route path="/users" element={
-          <ProtectedRoute>
+          authenticated ? (
             <div className="flex h-screen bg-gray-100">
               <Sidebar 
                 isOpen={sidebarOpen} 
@@ -130,11 +127,13 @@ function App() {
                 </main>
               </div>
             </div>
-          </ProtectedRoute>
+          ) : (
+            <Navigate to="/login" replace />
+          )
         } />
         
         <Route path="/shipments" element={
-          <ProtectedRoute>
+          authenticated ? (
             <div className="flex h-screen bg-gray-100">
               <Sidebar 
                 isOpen={sidebarOpen} 
@@ -153,11 +152,13 @@ function App() {
                 </main>
               </div>
             </div>
-          </ProtectedRoute>
+          ) : (
+            <Navigate to="/login" replace />
+          )
         } />
         
         <Route path="/settings" element={
-          <ProtectedRoute>
+          authenticated ? (
             <div className="flex h-screen bg-gray-100">
               <Sidebar 
                 isOpen={sidebarOpen} 
@@ -176,7 +177,9 @@ function App() {
                 </main>
               </div>
             </div>
-          </ProtectedRoute>
+          ) : (
+            <Navigate to="/login" replace />
+          )
         } />
         
         {/* Catch all route - redirect to login or admin initializer based on whether super admin exists */}

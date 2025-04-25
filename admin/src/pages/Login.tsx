@@ -2,10 +2,15 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 
-// Add this line at the top of the file
+// API URL constant
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
-const Login = () => {
+// Add onLoginSuccess prop
+interface LoginProps {
+  onLoginSuccess?: () => void;
+}
+
+const Login = ({ onLoginSuccess }: LoginProps) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -42,7 +47,12 @@ const Login = () => {
       // Store token in localStorage
       localStorage.setItem('token', response.data.token);
       
-      // Successful login
+      // Call the onLoginSuccess callback if provided
+      if (onLoginSuccess) {
+        onLoginSuccess();
+      }
+      
+      // Navigate to dashboard
       navigate('/');
     } catch (err: any) {
       setError(err.response?.data?.message || 'Invalid email or password');
