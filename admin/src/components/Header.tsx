@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 interface HeaderProps {
@@ -10,10 +10,36 @@ interface HeaderProps {
 const Header = ({ toggleSidebar, toggleMobileMenu, sidebarOpen }: HeaderProps) => {
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
+  const [userInfo, setUserInfo] = useState({
+    firstName: '',
+    lastName: '',
+    email: '',
+    role: ''
+  });
   const navigate = useNavigate();
+
+  useEffect(() => {
+    // Get user info from localStorage token
+    const token = localStorage.getItem('token');
+    if (token) {
+      try {
+        const decoded = JSON.parse(atob(token.split('.')[1]));
+        // Extract user info from decoded token
+        setUserInfo({
+          firstName: decoded.firstName || 'Admin',
+          lastName: decoded.lastName || 'User',
+          email: decoded.email || 'admin@oceantracker.com',
+          role: decoded.role || 'admin'
+        });
+      } catch (error) {
+        console.error('Error decoding token:', error);
+      }
+    }
+  }, []);
 
   const handleLogout = () => {
     // Implement logout functionality here
+    localStorage.removeItem('token');
     navigate('/login');
   };
 
@@ -158,7 +184,9 @@ const Header = ({ toggleSidebar, toggleMobileMenu, sidebarOpen }: HeaderProps) =
               >
                 <span className="sr-only">Open user menu</span>
                 <div className="h-8 w-8 rounded-full bg-blue-600 flex items-center justify-center">
-                  <span className="text-white font-semibold">A</span>
+                  <span className="text-white font-semibold">
+                    {userInfo.firstName.charAt(0)}
+                  </span>
                 </div>
               </button>
               
@@ -172,8 +200,9 @@ const Header = ({ toggleSidebar, toggleMobileMenu, sidebarOpen }: HeaderProps) =
                 >
                   <div className="py-1" role="none">
                     <div className="px-4 py-2 text-sm text-gray-700 border-b">
-                      <p className="font-medium">Admin User</p>
-                      <p className="text-xs text-gray-500">admin@oceantracker.com</p>
+                      <p className="font-medium">{userInfo.firstName} {userInfo.lastName}</p>
+                      <p className="text-xs text-gray-500">{userInfo.email}</p>
+                      <p className="text-xs text-gray-500 capitalize">Role: {userInfo.role}</p>
                     </div>
                     <a
                       href="#"

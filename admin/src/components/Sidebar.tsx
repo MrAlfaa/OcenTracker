@@ -1,4 +1,5 @@
 import { Link, useLocation } from 'react-router-dom';
+import { useEffect, useState } from 'react';
 
 interface SidebarProps {
   isOpen: boolean;
@@ -9,15 +10,50 @@ interface SidebarProps {
 
 const Sidebar = ({ isOpen, isMobileOpen, toggleSidebar, closeMobileMenu }: SidebarProps) => {
   const location = useLocation();
+  const [userRole, setUserRole] = useState<string>('');
+  const [userInfo, setUserInfo] = useState({
+    firstName: '',
+    lastName: '',
+    email: '',
+    role: ''
+  });
   
-  // Navigation items
+  useEffect(() => {
+    // Get user role from localStorage
+    const token = localStorage.getItem('token');
+    if (token) {
+      try {
+        const decoded = JSON.parse(atob(token.split('.')[1]));
+        setUserRole(decoded.role);
+        
+        // Also set user info
+        setUserInfo({
+          firstName: decoded.firstName || 'Admin',
+          lastName: decoded.lastName || 'User',
+          email: decoded.email || 'admin@oceantracker.com',
+          role: decoded.role || 'admin'
+        });
+      } catch (error) {
+        console.error('Error decoding token:', error);
+      }
+    }
+  }, []);
+  
+  // Navigation items with role-based visibility
   const navItems = [
-    { name: 'Dashboard', path: '/', icon: 'home' },
-    { name: 'Users', path: '/users', icon: 'users' },
-    { name: 'Shipments', path: '/shipments', icon: 'truck' },
-    { name: 'Reports', path: '/reports', icon: 'chart-bar' },
-    { name: 'Settings', path: '/settings', icon: 'cog' },
+    { name: 'Dashboard', path: '/', icon: 'home', roles: ['admin', 'superAdmin'] },
+    { name: 'Users', path: '/users', icon: 'users', roles: ['admin', 'superAdmin'] },
+    { name: 'Shipments', path: '/shipments', icon: 'truck', roles: ['admin', 'superAdmin'] },
+    { name: 'Role Creation', path: '/role-creation', icon: 'user-plus', roles: ['superAdmin'] },
+    { name: 'Drivers', path: '/drivers', icon: 'truck-driver', roles: ['admin', 'superAdmin', 'driver'] },
+    { name: 'Reports', path: '/reports', icon: 'chart-bar', roles: ['admin', 'superAdmin'] },
+    { name: 'Settings', path: '/settings', icon: 'cog', roles: ['admin', 'superAdmin'] },
   ];
+
+  // Filter nav items based on user role
+  const filteredNavItems = navItems.filter(item => 
+    item.roles.includes(userRole)
+  );
 
   // Function to render the appropriate icon
   const renderIcon = (iconName: string) => {
@@ -38,6 +74,19 @@ const Sidebar = ({ isOpen, isMobileOpen, toggleSidebar, closeMobileMenu }: Sideb
         return (
           <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
             <path d="M9 17a2 2 0 11-4 0 2 2 0 014 0zM19 17a2 2 0 11-4 0 2 2 0 014 0z"></path>
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16V6a1 1 0 00-1-1H4a1 1 0 00-1 1v10a1 1 0 001 1h1m8-1a1 1 0 01-1 1H9m4-1V8a1 1 0 011-1h2.586a1 1 0 01.707.293l3.414 3.414a1 1 0 01.293.707V16a1 1 0 01-1 1h-1m-6-1a1 1 0 001 1h1M5 17a2 2 0 104 0m-4 0a2 2 0 114 0m6 0a2 2 0 104 0m-4 0a2 2 0 114 0"></path>
+          </svg>
+        );
+      case 'user-plus':
+        return (
+          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z"></path>
+          </svg>
+        );
+      case 'truck-driver':
+        return (
+          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 17a2 2 0 11-4 0 2 2 0 014 0zM19 17a2 2 0 11-4 0 2 2 0 014 0z"></path>
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16V6a1 1 0 00-1-1H4a1 1 0 00-1 1v10a1 1 0 001 1h1m8-1a1 1 0 01-1 1H9m4-1V8a1 1 0 011-1h2.586a1 1 0 01.707.293l3.414 3.414a1 1 0 01.293.707V16a1 1 0 01-1 1h-1m-6-1a1 1 0 001 1h1M5 17a2 2 0 104 0m-4 0a2 2 0 114 0m6 0a2 2 0 104 0m-4 0a2 2 0 114 0"></path>
           </svg>
         );
@@ -101,7 +150,7 @@ const Sidebar = ({ isOpen, isMobileOpen, toggleSidebar, closeMobileMenu }: Sideb
             )}
           </div>
           <ul>
-            {navItems.map((item) => (
+            {filteredNavItems.map((item) => (
               <li key={item.name} className="mb-2">
                 <Link
                   to={item.path}
@@ -122,12 +171,15 @@ const Sidebar = ({ isOpen, isMobileOpen, toggleSidebar, closeMobileMenu }: Sideb
         <div className={`absolute bottom-0 w-full p-4 ${isOpen ? 'text-left' : 'text-center'}`}>
           <div className="flex items-center">
             <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center">
-              <span className="text-white font-semibold">A</span>
+              <span className="text-white font-semibold">
+                {userInfo.firstName.charAt(0)}
+              </span>
             </div>
             {isOpen && (
               <div className="ml-3">
-                <p className="text-sm font-medium text-white">Admin User</p>
-                <p className="text-xs text-blue-200">admin@oceantracker.com</p>
+                <p className="text-sm font-medium text-white">{userInfo.firstName} {userInfo.lastName}</p>
+                <p className="text-xs text-blue-200">{userInfo.email}</p>
+                <p className="text-xs text-blue-200 capitalize">Role: {userInfo.role}</p>
               </div>
             )}
           </div>
@@ -172,7 +224,7 @@ const Sidebar = ({ isOpen, isMobileOpen, toggleSidebar, closeMobileMenu }: Sideb
               <h2 className="text-xs uppercase tracking-wider text-blue-200">Main Menu</h2>
             </div>
             <ul>
-              {navItems.map((item) => (
+              {filteredNavItems.map((item) => (
                 <li key={item.name} className="mb-2">
                   <Link
                     to={item.path}
@@ -194,11 +246,14 @@ const Sidebar = ({ isOpen, isMobileOpen, toggleSidebar, closeMobileMenu }: Sideb
           <div className="absolute bottom-0 w-full p-4">
             <div className="flex items-center">
               <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center">
-                <span className="text-white font-semibold">A</span>
+                <span className="text-white font-semibold">
+                  {userInfo.firstName.charAt(0)}
+                </span>
               </div>
               <div className="ml-3">
-                <p className="text-sm font-medium text-white">Admin User</p>
-                <p className="text-xs text-blue-200">admin@oceantracker.com</p>
+                <p className="text-sm font-medium text-white">{userInfo.firstName} {userInfo.lastName}</p>
+                <p className="text-xs text-blue-200">{userInfo.email}</p>
+                <p className="text-xs text-blue-200 capitalize">Role: {userInfo.role}</p>
               </div>
             </div>
           </div>
