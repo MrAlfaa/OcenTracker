@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 
 const Navbar: React.FC = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
   const { isAuthenticated, user, logout } = useAuth();
+  const navigate = useNavigate();
 
   const toggleMenu = () => {
     setIsMenuOpen(!isMenuOpen);
@@ -18,6 +19,8 @@ const Navbar: React.FC = () => {
   const handleLogout = () => {
     logout();
     setIsProfileMenuOpen(false);
+    // Navigate to login page after logout
+    navigate('/login');
   };
 
   return (
@@ -72,6 +75,7 @@ const Navbar: React.FC = () => {
                   >
                     <div className="px-4 py-2 text-sm text-gray-700 border-b">
                       <p className="font-medium">{user?.firstName} {user?.lastName}</p>
+                      <p className="text-xs text-gray-500">ID: {user?.userID}</p>
                       <p className="text-xs text-gray-500">{user?.email}</p>
                     </div>
                     <Link

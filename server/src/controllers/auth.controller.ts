@@ -1,6 +1,17 @@
 import { Request, Response } from 'express';
 import jwt from 'jsonwebtoken';
 import User from '../models/user.model';
+import Counter from '../models/counter.model'; // Import the counter model
+
+// Function to get the next userID
+const getNextUserID = async (): Promise<number> => {
+  const counter = await Counter.findByIdAndUpdate(
+    { _id: 'userID' },
+    { $inc: { seq: 1 } },
+    { new: true, upsert: true }
+  );
+  return counter.seq;
+};
 
 // Register a new user
 export const register = async (req: Request, res: Response) => {
@@ -13,8 +24,12 @@ export const register = async (req: Request, res: Response) => {
       return res.status(400).json({ message: 'User already exists with this email' });
     }
 
-    // Create new user
+    // Get a unique userID
+    const userID = await getNextUserID();
+
+    // Create new user with userID
     const user = new User({
+      userID,
       email,
       password,
       firstName,
@@ -26,7 +41,7 @@ export const register = async (req: Request, res: Response) => {
 
     // Generate JWT token
     const token = jwt.sign(
-      { id: user._id, email: user.email, role: user.role },
+      { id: user._id, email: user.email, role: user.role, userID: user.userID },
       process.env.JWT_SECRET as string,
       { expiresIn: '7d' }
     );
@@ -35,6 +50,7 @@ export const register = async (req: Request, res: Response) => {
       token,
       user: {
         id: user._id,
+        userID: user.userID,
         email: user.email,
         firstName: user.firstName,
         lastName: user.lastName,
@@ -67,7 +83,7 @@ export const login = async (req: Request, res: Response) => {
 
     // Generate JWT token
     const token = jwt.sign(
-      { id: user._id, email: user.email, role: user.role },
+      { id: user._id, email: user.email, role: user.role, userID: user.userID },
       process.env.JWT_SECRET as string,
       { expiresIn: '7d' }
     );
@@ -76,6 +92,7 @@ export const login = async (req: Request, res: Response) => {
       token,
       user: {
         id: user._id,
+        userID: user.userID,
         email: user.email,
         firstName: user.firstName,
         lastName: user.lastName,
