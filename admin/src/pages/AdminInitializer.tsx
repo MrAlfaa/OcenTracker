@@ -56,11 +56,16 @@ const AdminInitializer = () => {
       // Clear any existing token to ensure clean login state
       localStorage.removeItem('token');
       
-      // Navigate to the login page
-      navigate('/login');
+      // Use a slight delay to ensure the alert is seen and the state is updated
+      setTimeout(() => {
+        // Navigate to the login page
+        navigate('/login', { replace: true });
+        
+        // Force a reload after navigation to ensure App.tsx re-evaluates superAdminExists
+        // window.location.href = '/login'; // Alternative approach if navigate doesn't work
+      }, 500);
     } catch (err: any) {
       setError(err.response?.data?.message || 'An error occurred during setup');
-    } finally {
       setIsLoading(false);
     }
   };
