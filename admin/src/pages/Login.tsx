@@ -36,9 +36,9 @@ const Login = ({ onLoginSuccess }: LoginProps) => {
         { email, password }
       );
       
-      // Verify if user is admin or superAdmin
+      // Verify if user has admin, superAdmin, or driver role
       const { role } = response.data.user;
-      if (role !== 'admin' && role !== 'superAdmin') {
+      if (role !== 'admin' && role !== 'superAdmin' && role !== 'driver') {
         setError('Access denied. Admin privileges required.');
         setIsLoading(false);
         return;
@@ -52,8 +52,13 @@ const Login = ({ onLoginSuccess }: LoginProps) => {
         onLoginSuccess();
       }
       
-      // Navigate to dashboard
-      navigate('/');
+      // Navigate driver users directly to the drivers page
+      if (role === 'driver') {
+        navigate('/drivers');
+      } else {
+        // Navigate admin/superAdmin to dashboard
+        navigate('/');
+      }
     } catch (err: any) {
       setError(err.response?.data?.message || 'Invalid email or password');
       setIsLoading(false);
