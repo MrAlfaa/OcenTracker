@@ -54,7 +54,9 @@ router.post('/send', authMiddleware, async (req, res) => {
       itemTypes, 
       recipientId, 
       recipientName, 
-      recipientEmail, 
+      recipientEmail,
+      recipientAddress, // New field
+      recipientPhone,   // New field
       branch, 
       notes 
     } = req.body;
@@ -79,6 +81,8 @@ router.post('/send', authMiddleware, async (req, res) => {
       recipientId,
       recipientName,
       recipientEmail,
+      recipientAddress, // New field
+      recipientPhone,   // New field
       itemTypes,
       branch,
       notes,

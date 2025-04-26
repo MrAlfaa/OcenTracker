@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { Shipment } from '../types/shipment';
-import { FaUser, FaMapMarkerAlt, FaBoxOpen, FaCheck, FaSpinner, FaEdit } from 'react-icons/fa';
+import { FaUser, FaMapMarkerAlt, FaBoxOpen, FaCheck, FaSpinner, FaEdit, FaPhone, FaAddressCard } from 'react-icons/fa';
 
 interface User {
   userID: string;
@@ -20,6 +20,8 @@ const SendShipmentForm: React.FC<SendShipmentFormProps> = ({ onShipmentCreated }
   const [searchTerm, setSearchTerm] = useState('');
   const [searchResults, setSearchResults] = useState<User[]>([]);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
+  const [receiverAddress, setReceiverAddress] = useState('');
+  const [receiverPhone, setReceiverPhone] = useState('');
   const [branch, setBranch] = useState('');
   const [notes, setNotes] = useState('');
   const [loading, setLoading] = useState(false);
@@ -30,7 +32,7 @@ const SendShipmentForm: React.FC<SendShipmentFormProps> = ({ onShipmentCreated }
   // Create a ref to track whether form is being submitted
   const isSubmitting = useRef(false);
   
-  const { token } = useAuth();
+  const { token, user } = useAuth();
   const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
   const itemTypeOptions = [
@@ -70,7 +72,13 @@ const SendShipmentForm: React.FC<SendShipmentFormProps> = ({ onShipmentCreated }
       }
       
       const data = await response.json();
-      setSearchResults(data);
+      
+      // Filter out the current logged-in user from search results
+      const filteredResults = data.filter((searchUser: User) => 
+        searchUser.userID !== (user?.userID?.toString())
+      );
+      
+      setSearchResults(filteredResults);
       setIsSearching(false);
     } catch (err) {
       console.error('Error searching users:', err);
@@ -115,11 +123,21 @@ const SendShipmentForm: React.FC<SendShipmentFormProps> = ({ onShipmentCreated }
         throw new Error('Please select a branch');
       }
       
+      if (!receiverAddress) {
+        throw new Error('Please enter the recipient\'s address');
+      }
+      
+      if (!receiverPhone) {
+        throw new Error('Please enter the recipient\'s contact number');
+      }
+      
       const shipmentData = {
         itemTypes,
         recipientId: selectedUser.userID,
         recipientName: `${selectedUser.firstName} ${selectedUser.lastName}`,
         recipientEmail: selectedUser.email,
+        recipientAddress: receiverAddress,
+        recipientPhone: receiverPhone,
         branch,
         notes,
         requestedDate: new Date().toISOString()
@@ -145,6 +163,8 @@ const SendShipmentForm: React.FC<SendShipmentFormProps> = ({ onShipmentCreated }
       // Reset form
       setItemTypes([]);
       setSelectedUser(null);
+      setReceiverAddress('');
+      setReceiverPhone('');
       setBranch('');
       setNotes('');
       setStep(1);
@@ -182,9 +202,21 @@ const SendShipmentForm: React.FC<SendShipmentFormProps> = ({ onShipmentCreated }
       return;
     }
     
-    if (step === 2 && !selectedUser) {
-      setError('Please select a recipient');
-      return;
+    if (step === 2) {
+      if (!selectedUser) {
+        setError('Please select a recipient');
+        return;
+      }
+      
+      if (!receiverAddress.trim()) {
+        setError('Please enter the recipient\'s address');
+        return;
+      }
+      
+      if (!receiverPhone.trim()) {
+        setError('Please enter the recipient\'s contact number');
+        return;
+      }
     }
     
     if (step === 3 && !branch) {
@@ -349,6 +381,44 @@ const SendShipmentForm: React.FC<SendShipmentFormProps> = ({ onShipmentCreated }
                   </div>
                 </div>
               )}
+              
+              {/* New fields for recipient address and contact number */}
+              <div className="mt-6 space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <div className="flex items-center">
+                      <FaAddressCard className="mr-2 text-blue-600" />
+                      Recipient's Address
+                    </div>
+                  </label>
+                  <textarea
+                    value={receiverAddress}
+                    onChange={(e) => setReceiverAddress(e.target.value)}
+                    placeholder="Enter complete delivery address"
+                    rows={3}
+                    className="shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full text-gray-800 bg-white sm:text-sm border-gray-300 rounded-md p-3"
+                    required
+                  />
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <div className="flex items-center">
+                      <FaPhone className="mr-2 text-blue-600" />
+                      Recipient's Contact Number
+                    </div>
+                  </label>
+                  <input
+                    type="tel"
+                    value={receiverPhone}
+                    onChange={(e) => setReceiverPhone(e.target.value)}
+                    placeholder="e.g., +94XXXXXXXXX"
+                    className="shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full text-gray-800 bg-white sm:text-sm border-gray-300 rounded-md p-3"
+                    required
+                  />
+                  <p className="mt-1 text-xs text-gray-500">Please include country code (e.g., +94 for Sri Lanka)</p>
+                </div>
+              </div>
             </div>
           </div>
         );
@@ -412,7 +482,7 @@ const SendShipmentForm: React.FC<SendShipmentFormProps> = ({ onShipmentCreated }
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
                 rows={4}
-                className="shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border-gray-300 rounded-md bg-gray-50 p-3"
+                className="shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border-gray-300 rounded-md bg-white text-gray-800 p-3"
                 placeholder="Add any special instructions or notes about your shipment"
               />
             </div>
@@ -437,6 +507,16 @@ const SendShipmentForm: React.FC<SendShipmentFormProps> = ({ onShipmentCreated }
                     <p className="text-gray-800">{selectedUser?.firstName} {selectedUser?.lastName}</p>
                     <p className="text-xs text-gray-500">ID: {selectedUser?.userID} • {selectedUser?.email}</p>
                   </div>
+                </div>
+                
+                <div className="flex items-start">
+                  <div className="flex-shrink-0 w-24 text-sm font-medium text-gray-500">Address:</div>
+                  <div className="flex-1 text-gray-800 text-sm">{receiverAddress}</div>
+                </div>
+                
+                <div className="flex items-start">
+                  <div className="flex-shrink-0 w-24 text-sm font-medium text-gray-500">Contact:</div>
+                  <div className="flex-1 text-gray-800 text-sm">{receiverPhone}</div>
                 </div>
                 
                 <div className="flex items-start">

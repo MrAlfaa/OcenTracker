@@ -16,12 +16,14 @@ export interface IShipment extends Document {
   createdAt: Date;
   updatedAt: Date;
   
-  // New fields for send functionality
+  // Fields for send functionality
   senderId?: string;
   senderName?: string;
   recipientId?: string;
   recipientName?: string;
   recipientEmail?: string;
+  recipientAddress?: string; // New field
+  recipientPhone?: string;   // New field
   itemTypes?: string[];
   branch?: string;
   notes?: string;
@@ -72,7 +74,7 @@ const shipmentSchema = new Schema(
       },
     ],
     
-    // New fields for send functionality
+    // Fields for send functionality
     senderId: {
       type: String,
       trim: true,
@@ -90,6 +92,14 @@ const shipmentSchema = new Schema(
       trim: true,
     },
     recipientEmail: {
+      type: String,
+      trim: true,
+    },
+    recipientAddress: {
+      type: String,
+      trim: true,
+    },
+    recipientPhone: {
       type: String,
       trim: true,
     },

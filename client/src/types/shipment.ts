@@ -13,12 +13,14 @@ export interface Shipment {
   estimatedDelivery: string;
   trackingHistory: TrackingEvent[];
   
-  // New fields for send functionality
+  // Fields for send functionality
   senderId?: string;
   senderName?: string;
   recipientId?: string;
   recipientName?: string;
   recipientEmail?: string;
+  recipientAddress?: string;
+  recipientPhone?: string;
   itemTypes?: string[];
   branch?: string;
   notes?: string;
