@@ -47,8 +47,17 @@ const TrackingPage: React.FC = () => {
     }
   };
 
+  const [recentlyCreatedShipment, setRecentlyCreatedShipment] = useState<string | null>(null);
+
   const handleShipmentCreated = (newShipment: Shipment) => {
-    setShipment(newShipment);
+    setRecentlyCreatedShipment(newShipment.trackingNumber);
+    // Set the service tab to 'send' (as it doesn't have a 'track' option)
+    setServiceTab('send');
+    
+    // Clear this message after some time
+    setTimeout(() => {
+      setRecentlyCreatedShipment(null);
+    }, 10000); // Clear after 10 seconds
   };
 
   return (
