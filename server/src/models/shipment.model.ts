@@ -15,6 +15,18 @@ export interface IShipment extends Document {
   trackingHistory: TrackingEvent[];
   createdAt: Date;
   updatedAt: Date;
+  
+  // New fields for send functionality
+  senderId?: string;
+  senderName?: string;
+  recipientId?: string;
+  recipientName?: string;
+  recipientEmail?: string;
+  itemTypes?: string[];
+  branch?: string;
+  notes?: string;
+  requestedDate?: Date;
+  shipmentType?: 'regular' | 'send' | 'receive';
 }
 
 const shipmentSchema = new Schema(
@@ -59,6 +71,45 @@ const shipmentSchema = new Schema(
         },
       },
     ],
+    
+    // New fields for send functionality
+    senderId: {
+      type: String,
+      trim: true,
+    },
+    senderName: {
+      type: String,
+      trim: true,
+    },
+    recipientId: {
+      type: String,
+      trim: true,
+    },
+    recipientName: {
+      type: String,
+      trim: true,
+    },
+    recipientEmail: {
+      type: String,
+      trim: true,
+    },
+    itemTypes: [String],
+    branch: {
+      type: String,
+      trim: true,
+    },
+    notes: {
+      type: String,
+      trim: true,
+    },
+    requestedDate: {
+      type: Date,
+    },
+    shipmentType: {
+      type: String,
+      enum: ['regular', 'send', 'receive'],
+      default: 'regular',
+    },
   },
   { timestamps: true }
 );

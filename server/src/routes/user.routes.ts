@@ -1,5 +1,5 @@
 import express from 'express';
-import { createUser, getDrivers } from '../controllers/user.controller';
+import { createUser, getDrivers, searchUsers } from '../controllers/user.controller';
 import { authMiddleware } from '../middleware/auth.middleware';
 import { adminAuthMiddleware } from '../middleware/adminAuth.middleware';
 
@@ -16,5 +16,8 @@ router.get('/drivers/:id', authMiddleware, adminAuthMiddleware, /* getDriverById
 
 // Update driver information (for future implementation)
 router.put('/drivers/:id', authMiddleware, adminAuthMiddleware, /* updateDriver */);
+
+// Search users - protected route
+router.get('/search', authMiddleware, searchUsers);
 
 export default router;
