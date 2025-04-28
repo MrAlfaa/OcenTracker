@@ -29,8 +29,11 @@ export interface IShipment extends Document {
   notes?: string;
   requestedDate?: Date;
   shipmentType?: 'regular' | 'send' | 'receive';
-}
 
+  // New fields for driver assignment
+  driverId?: string;
+  driverName?: string;
+}
 const shipmentSchema = new Schema(
   {
     trackingNumber: {
@@ -42,7 +45,7 @@ const shipmentSchema = new Schema(
     status: {
       type: String,
       required: true,
-      enum: ['Pending', 'In Transit', 'Delivered', 'Delayed', 'Cancelled'],
+      enum: ['Pending', 'In Transit', 'Delivered', 'Delayed', 'Cancelled', 'Picked Up'],
       default: 'Pending',
     },
     origin: {

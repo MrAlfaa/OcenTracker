@@ -1,7 +1,37 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
+import { FaBox, FaSpinner, FaTruck, FaCheckCircle, FaExclamationTriangle, FaArrowRight, FaClipboardCheck } from 'react-icons/fa';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+
+// Define shipment type
+interface TrackingEvent {
+  status: string;
+  location: string;
+  timestamp: string;
+}
+
+interface Shipment {
+  _id: string;
+  trackingNumber: string;
+  status: string;
+  origin: string;
+  destination: string;
+  estimatedDelivery: string;
+  senderId?: string;
+  senderName?: string;
+  recipientId?: string;
+  recipientName?: string;
+  recipientEmail?: string;
+  recipientAddress?: string;
+  recipientPhone?: string;
+  itemTypes?: string[];
+  branch?: string;
+  notes?: string;
+  trackingHistory: TrackingEvent[];
+  createdAt: string;
+  updatedAt: string;
+}
 
 interface Driver {
   _id: string;
@@ -13,36 +43,470 @@ interface Driver {
   createdAt: string;
 }
 
+// Status badge component
+const StatusBadge = ({ status }: { status: string }) => {
+  let bgColor = 'bg-gray-100 text-gray-800';
+  let icon = <FaTruck className="mr-1" />;
+
+  switch (status.toLowerCase()) {
+    case 'pending':
+      bgColor = 'bg-yellow-100 text-yellow-800';
+      icon = <FaExclamationTriangle className="mr-1" />;
+      break;
+    case 'in transit':
+      bgColor = 'bg-blue-100 text-blue-800';
+      icon = <FaTruck className="mr-1" />;
+      break;
+    case 'picked up':
+      bgColor = 'bg-purple-100 text-purple-800';
+      icon = <FaClipboardCheck className="mr-1" />;
+      break;
+    case 'delivered':
+      bgColor = 'bg-green-100 text-green-800';
+      icon = <FaCheckCircle className="mr-1" />;
+      break;
+    case 'delayed':
+      bgColor = 'bg-orange-100 text-orange-800';
+      icon = <FaExclamationTriangle className="mr-1" />;
+      break;
+  }
+
+  return (
+    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${bgColor}`}>
+      {icon}
+      {status}
+    </span>
+  );
+};
+
 const Drivers = () => {
+  const [userRole, setUserRole] = useState<string>('');
   const [drivers, setDrivers] = useState<Driver[]>([]);
+  const [assignedShipments, setAssignedShipments] = useState<Shipment[]>([]);
+  const [selectedShipment, setSelectedShipment] = useState<Shipment | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
+  const [pickupNote, setPickupNote] = useState('');
+  const [handoverNote, setHandoverNote] = useState('');
+  const [processingAction, setProcessingAction] = useState(false);
+  const [actionSuccess, setActionSuccess] = useState('');
 
   useEffect(() => {
-    const fetchDrivers = async () => {
+    // Get user role from token
+    const token = localStorage.getItem('token');
+    if (token) {
       try {
-        const token = localStorage.getItem('token');
+        const decoded = JSON.parse(atob(token.split('.')[1]));
+        setUserRole(decoded.role);
         
-        const response = await axios.get(
-          `${API_URL}/api/users/drivers`,
-          {
-            headers: {
-              'x-auth-token': token
-            }
-          }
-        );
-        
-        setDrivers(response.data);
-        setIsLoading(false);
-      } catch (err: any) {
-        setError(err.response?.data?.message || 'Error fetching drivers');
-        setIsLoading(false);
+        // If user is a driver, fetch their assigned shipments
+        if (decoded.role === 'driver') {
+          fetchDriverShipments();
+        } else {
+          // If admin or superAdmin, fetch all drivers
+          fetchDrivers();
+        }
+      } catch (err) {
+        console.error('Error decoding token:', err);
+        setError('Authentication error. Please login again.');
       }
-    };
-
-    fetchDrivers();
+    }
+    setIsLoading(false);
   }, []);
 
+  const fetchDrivers = async () => {
+    try {
+      setIsLoading(true);
+      const token = localStorage.getItem('token');
+      
+      const response = await axios.get(
+        `${API_URL}/api/users/drivers`,
+        {
+          headers: {
+            'x-auth-token': token
+          }
+        }
+      );
+      
+      setDrivers(response.data);
+      setIsLoading(false);
+    } catch (err: any) {
+      setError(err.response?.data?.message || 'Error fetching drivers');
+      setIsLoading(false);
+    }
+  };
+
+  const fetchDriverShipments = async () => {
+    try {
+      setIsLoading(true);
+      const token = localStorage.getItem('token');
+      
+      const response = await axios.get(
+        `${API_URL}/api/shipments/driver`,
+        {
+          headers: {
+            'x-auth-token': token
+          }
+        }
+      );
+      
+      setAssignedShipments(response.data);
+      setIsLoading(false);
+    } catch (err: any) {
+      setError(err.response?.data?.message || 'Error fetching assigned shipments');
+      setIsLoading(false);
+    }
+  };
+
+  const handlePickup = async (shipmentId: string) => {
+    try {
+      setProcessingAction(true);
+      const token = localStorage.getItem('token');
+      
+      await axios.put(
+        `${API_URL}/api/shipments/driver/${shipmentId}/pickup`,
+        { notes: pickupNote },
+        {
+          headers: {
+            'x-auth-token': token
+          }
+        }
+      );
+      
+      // Refresh shipments
+      fetchDriverShipments();
+      setPickupNote('');
+      setActionSuccess('Package marked as picked up successfully!');
+      
+      // Clear success message after 3 seconds
+      setTimeout(() => setActionSuccess(''), 3000);
+      setProcessingAction(false);
+    } catch (err: any) {
+      setError(err.response?.data?.message || 'Error updating shipment');
+      setProcessingAction(false);
+    }
+  };
+
+  const handleHandover = async (shipmentId: string) => {
+    try {
+      setProcessingAction(true);
+      const token = localStorage.getItem('token');
+      
+      await axios.put(
+        `${API_URL}/api/shipments/driver/${shipmentId}/handover`,
+        { 
+          notes: handoverNote,
+          branchLocation: selectedShipment?.destination 
+        },
+        {
+          headers: {
+            'x-auth-token': token
+          }
+        }
+      );
+      
+      // Refresh shipments
+      fetchDriverShipments();
+      setHandoverNote('');
+      setActionSuccess('Package handed over to branch successfully!');
+      
+      // Clear success message after 3 seconds
+      setTimeout(() => setActionSuccess(''), 3000);
+      setProcessingAction(false);
+    } catch (err: any) {
+      setError(err.response?.data?.message || 'Error updating shipment');
+      setProcessingAction(false);
+    }
+  };
+
+  // Format date
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleString();
+  };
+
+  // Render different content based on user role
+  if (userRole === 'driver') {
+    return (
+      <div className="container mx-auto px-4 py-8">
+        <h1 className="text-2xl font-bold mb-6">My Assigned Shipments</h1>
+        
+        {error && (
+          <div className="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 mb-6">
+            <p>{error}</p>
+          </div>
+        )}
+        
+        {actionSuccess && (
+          <div className="bg-green-100 border-l-4 border-green-500 text-green-700 p-4 mb-6">
+            <p>{actionSuccess}</p>
+          </div>
+        )}
+        
+        {isLoading ? (
+          <div className="p-6 text-center">
+            <div className="inline-block animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-500"></div>
+            <p className="mt-2 text-gray-600">Loading shipments...</p>
+          </div>
+        ) : assignedShipments.length === 0 ? (
+          <div className="bg-white shadow-md rounded-lg p-6 text-center">
+            <FaBox className="mx-auto h-12 w-12 text-gray-300 mb-4" />
+            <p className="text-gray-500">No shipments assigned to you at the moment.</p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Shipments List */}
+            <div className="bg-white shadow-md rounded-lg overflow-hidden">
+              <div className="px-4 py-5 border-b border-gray-200">
+                <h2 className="text-lg font-medium text-gray-900">Assigned Shipments</h2>
+              </div>
+              <div className="overflow-x-auto">
+                <table className="min-w-full divide-y divide-gray-200">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Tracking
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Status
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Destination
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Date
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-200">
+                    {assignedShipments.map(shipment => (
+                      <tr 
+                        key={shipment._id} 
+                        onClick={() => setSelectedShipment(shipment)}
+                        className={`cursor-pointer hover:bg-gray-50 ${selectedShipment?._id === shipment._id ? 'bg-blue-50' : ''}`}
+                      >
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-blue-600">
+                          {shipment.trackingNumber}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm">
+                          <StatusBadge status={shipment.status} />
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                          {shipment.destination}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                          {new Date(shipment.updatedAt).toLocaleDateString()}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+            
+            {/* Shipment Details and Actions */}
+            {selectedShipment ? (
+              <div className="bg-white shadow-md rounded-lg overflow-hidden">
+                <div className="px-4 py-5 border-b border-gray-200 flex justify-between items-center">
+                  <h2 className="text-lg font-medium text-gray-900">Shipment Details</h2>
+                  <StatusBadge status={selectedShipment.status} />
+                </div>
+                
+                <div className="p-6">
+                  <dl className="grid grid-cols-1 gap-x-4 gap-y-6 sm:grid-cols-2">
+                    <div className="sm:col-span-1">
+                      <dt className="text-sm font-medium text-gray-500">Tracking Number</dt>
+                      <dd className="mt-1 text-sm text-gray-900">{selectedShipment.trackingNumber}</dd>
+                    </div>
+                    <div className="sm:col-span-1">
+                      <dt className="text-sm font-medium text-gray-500">Created</dt>
+                      <dd className="mt-1 text-sm text-gray-900">{formatDate(selectedShipment.createdAt)}</dd>
+                    </div>
+                    
+                    <div className="sm:col-span-1">
+                      <dt className="text-sm font-medium text-gray-500">Sender</dt>
+                      <dd className="mt-1 text-sm text-gray-900">{selectedShipment.senderName}</dd>
+                    </div>
+                    <div className="sm:col-span-1">
+                      <dt className="text-sm font-medium text-gray-500">Recipient</dt>
+                      <dd className="mt-1 text-sm text-gray-900">{selectedShipment.recipientName}</dd>
+                    </div>
+                    
+                    <div className="sm:col-span-2">
+                      <dt className="text-sm font-medium text-gray-500">Pickup Address</dt>
+                      <dd className="mt-1 text-sm text-gray-900">{selectedShipment.recipientAddress}</dd>
+                    </div>
+                    
+                    <div className="sm:col-span-1">
+                      <dt className="text-sm font-medium text-gray-500">Contact Number</dt>
+                      <dd className="mt-1 text-sm text-gray-900">{selectedShipment.recipientPhone}</dd>
+                    </div>
+                    
+                    <div className="sm:col-span-1">
+                      <dt className="text-sm font-medium text-gray-500">Destination Branch</dt>
+                      <dd className="mt-1 text-sm text-gray-900">{selectedShipment.destination}</dd>
+                    </div>
+                    
+                    {selectedShipment.itemTypes && selectedShipment.itemTypes.length > 0 && (
+                      <div className="sm:col-span-2">
+                        <dt className="text-sm font-medium text-gray-500">Item Types</dt>
+                        <dd className="mt-1 text-sm text-gray-900">
+                          <div className="flex flex-wrap gap-2">
+                            {selectedShipment.itemTypes.map((type, idx) => (
+                              <span key={idx} className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                                {type}
+                              </span>
+                            ))}
+                          </div>
+                        </dd>
+                      </div>
+                    )}
+                  </dl>
+                  
+                  {/* Driver Actions */}
+                  <div className="mt-8 border-t border-gray-200 pt-6">
+                    <h3 className="text-lg font-medium text-gray-900 mb-4">Actions</h3>
+                    
+                    {/* Workflow visualization */}
+                    <div className="flex items-center justify-between mb-6">
+                      <div className={`flex flex-col items-center ${selectedShipment.status === 'In Transit' ? 'text-blue-600' : selectedShipment.status === 'Picked Up' ? 'text-gray-400' : 'text-blue-600'}`}>
+                        <div className={`w-10 h-10 rounded-full flex items-center justify-center ${selectedShipment.status === 'In Transit' ? 'bg-blue-100 border-2 border-blue-500' : selectedShipment.status === 'Picked Up' ? 'bg-gray-100' : 'bg-blue-100 border-2 border-blue-500'}`}>
+                          <FaTruck className="h-5 w-5" />
+                        </div>
+                        <span className="mt-2 text-sm font-medium">Assigned</span>
+                      </div>
+                      
+                      <div className="flex-1 h-0.5 mx-2 bg-gray-200"></div>
+                      
+                      <div className={`flex flex-col items-center ${selectedShipment.status === 'Picked Up' ? 'text-purple-600' : 'text-gray-400'}`}>
+                        <div className={`w-10 h-10 rounded-full flex items-center justify-center ${selectedShipment.status === 'Picked Up' ? 'bg-purple-100 border-2 border-purple-500' : 'bg-gray-100'}`}>
+                          <FaClipboardCheck className="h-5 w-5" />
+                        </div>
+                        <span className="mt-2 text-sm font-medium">Picked Up</span>
+                      </div>
+                      
+                      <div className="flex-1 h-0.5 mx-2 bg-gray-200"></div>
+                      
+                      <div className={`flex flex-col items-center text-gray-400`}>
+                        <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center">
+                          <FaArrowRight className="h-5 w-5" />
+                        </div>
+                        <span className="mt-2 text-sm font-medium">Handed Over</span>
+                      </div>
+                    </div>
+                    
+                    {/* Action buttons based on current status */}
+                    {selectedShipment.status === 'In Transit' && (
+                      <div className="space-y-4">
+                        <div className="bg-blue-50 p-4 rounded-md border border-blue-100">
+                          <h4 className="text-sm font-medium text-blue-800 mb-2">Mark as Picked Up</h4>
+                          <p className="text-xs text-blue-600 mb-3">
+                            Use this action when you have collected the package from the sender.
+                          </p>
+                          <div className="space-y-3">
+                            <textarea
+                              value={pickupNote}
+                              onChange={(e) => setPickupNote(e.target.value)}
+                              placeholder="Add notes about the pickup (optional)"
+                              className="shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border-gray-300 rounded-md"
+                              rows={2}
+                            />
+                            <button
+                              onClick={() => handlePickup(selectedShipment._id)}
+                              disabled={processingAction}
+                              className="w-full inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                            >
+                              {processingAction ? (
+                                <FaSpinner className="animate-spin mr-2" />
+                              ) : (
+                                <FaClipboardCheck className="mr-2" />
+                              )}
+                              Confirm Pickup
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                    
+                    {selectedShipment.status === 'Picked Up' && (
+                      <div className="space-y-4">
+                        <div className="bg-purple-50 p-4 rounded-md border border-purple-100">
+                          <h4 className="text-sm font-medium text-purple-800 mb-2">Hand Over to Branch</h4>
+                          <p className="text-xs text-purple-600 mb-3">
+                            Use this action when you have delivered the package to the destination branch.
+                          </p>
+                          <div className="space-y-3">
+                            <textarea
+                              value={handoverNote}
+                              onChange={(e) => setHandoverNote(e.target.value)}
+                              placeholder="Add notes about the handover (optional)"
+                              className="shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border-gray-300 rounded-md"
+                              rows={2}
+                            />
+                            <button
+                              onClick={() => handleHandover(selectedShipment._id)}
+                              disabled={processingAction}
+                              className="w-full inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-purple-600 hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500"
+                            >
+                              {processingAction ? (
+                                <FaSpinner className="animate-spin mr-2" />
+                              ) : (
+                                <FaArrowRight className="mr-2" />
+                              )}
+                              Confirm Handover
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                  
+                  {/* Tracking History */}
+                  <div className="mt-8 border-t border-gray-200 pt-6">
+                    <h3 className="text-lg font-medium text-gray-900 mb-4">Tracking History</h3>
+                    <div className="flow-root">
+                      <ul className="-mb-8">
+                        {selectedShipment.trackingHistory.map((event, idx) => (
+                          <li key={idx}>
+                            <div className="relative pb-8">
+                              {idx !== selectedShipment.trackingHistory.length - 1 ? (
+                                <span className="absolute top-4 left-4 -ml-px h-full w-0.5 bg-gray-200" aria-hidden="true"></span>
+                              ) : null}
+                              <div className="relative flex space-x-3">
+                                <div>
+                                  <span className="h-8 w-8 rounded-full bg-blue-500 flex items-center justify-center ring-8 ring-white">
+                                    <FaTruck className="h-4 w-4 text-white" />
+                                  </span>
+                                </div>
+                                <div className="min-w-0 flex-1 pt-1.5 flex justify-between space-x-4">
+                                  <div>
+                                    <p className="text-sm text-gray-900">{event.status} <span className="text-gray-500">at {event.location}</span></p>
+                                  </div>
+                                  <div className="text-right text-sm whitespace-nowrap text-gray-500">
+                                    {formatDate(event.timestamp)}
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="bg-white shadow-md rounded-lg p-6 text-center">
+                <FaBox className="mx-auto h-12 w-12 text-gray-300 mb-4" />
+                <p className="text-gray-500">Select a shipment to view details and perform actions.</p>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    );
+  }
+  
+  // Admin view - show all drivers
   return (
     <div className="container mx-auto px-4 py-8">
       <h1 className="text-2xl font-bold mb-6">Drivers Management</h1>
