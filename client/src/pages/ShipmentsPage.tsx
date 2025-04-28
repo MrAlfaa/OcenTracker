@@ -14,6 +14,10 @@ const StatusBadge: React.FC<{ status: string }> = ({ status }) => {
       bgColor = 'bg-yellow-100 text-yellow-800';
       icon = <FaExclamationTriangle className="mr-1" />;
       break;
+    case 'pickup requested':
+      bgColor = 'bg-yellow-100 text-yellow-800';
+      icon = <FaTruck className="mr-1" />;
+      break;
     case 'in transit':
       bgColor = 'bg-blue-100 text-blue-800';
       icon = <FaTruck className="mr-1" />;
@@ -82,7 +86,7 @@ const ShipmentsPage: React.FC = () => {
       let statusFilter = '';
       switch (activeTab) {
         case 'ongoing':
-          statusFilter = 'Pending,In Transit,Picked Up,Delayed';
+          statusFilter = 'Pending,In Transit,Picked Up,Delayed,Pickup Requested';
           break;
         case 'completed':
           statusFilter = 'Delivered';
@@ -121,6 +125,40 @@ const ShipmentsPage: React.FC = () => {
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleString();
+  };
+
+  // Move the confirmPickup function inside the component
+  const confirmPickup = async (shipmentId: string) => {
+    try {
+      setLoading(true);
+      
+      const response = await fetch(
+        `${apiUrl}/api/shipments/user/${shipmentId}/confirm-pickup`,
+        {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-auth-token': token || ''
+          }
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error('Failed to confirm pickup');
+      }
+
+      // Refresh shipments
+      fetchShipments();
+      
+      // Show success message
+      // You could add a success state here if you want to show a message
+      
+    } catch (err) {
+      console.error('Error confirming pickup:', err);
+      setError(err instanceof Error ? err.message : 'An error occurred while confirming pickup');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -324,6 +362,49 @@ const ShipmentsPage: React.FC = () => {
                   </div>
                   
                   <div className="p-6">
+                    {/* Pickup Confirmation UI */}
+                    {selectedShipment.status === 'Pickup Requested' && selectedShipment.pickupRequested && !selectedShipment.pickupConfirmed && (
+                      <div className="mb-6 bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                        <div className="flex items-start">
+                          <div className="flex-shrink-0">
+                            <FaExclamationTriangle className="h-5 w-5 text-yellow-400" />
+                          </div>
+                          <div className="ml-3">
+                            <h3 className="text-sm font-medium text-yellow-800">Pickup Confirmation Required</h3>
+                            <div className="mt-2 text-sm text-yellow-700">
+                              <p>
+                                Driver {selectedShipment.driverName} has requested to pick up this shipment. 
+                                Please confirm when the package has been handed over to the driver.
+                              </p>
+                              <p className="mt-1 text-xs text-yellow-600">
+                                Requested at: {formatDate(selectedShipment.pickupRequestedAt || '')}
+                              </p>
+                            </div>
+                            <div className="mt-4">
+                              <button
+                                type="button"
+                                onClick={() => confirmPickup(selectedShipment._id)}
+                                disabled={loading}
+                                className="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md shadow-sm text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
+                              >
+                                {loading ? (
+                                  <>
+                                    <FaSpinner className="animate-spin -ml-1 mr-2 h-4 w-4" />
+                                    Processing...
+                                  </>
+                                ) : (
+                                  <>
+                                    <FaCheckCircle className="-ml-1 mr-2 h-4 w-4" />
+                                    Confirm Pickup
+                                  </>
+                                )}
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                    
                     {/* Shipment Progress Visualization - Enhanced */}
                     {activeTab === 'ongoing' && (
                       <div className="mb-8">
@@ -338,6 +419,10 @@ const ShipmentsPage: React.FC = () => {
                               switch (selectedShipment.status.toLowerCase()) {
                                 case 'pending':
                                   progressWidth = '10%';
+                                  break;
+                                case 'pickup requested':
+                                  progressWidth = '25%';
+                                  progressColor = 'bg-yellow-500';
                                   break;
                                 case 'picked up':
                                   progressWidth = '40%';
@@ -368,44 +453,28 @@ const ShipmentsPage: React.FC = () => {
                           </div>
                           
                           <div className="flex justify-between text-xs text-gray-600">
-                            <div className="flex flex-col items-center">
-                              <div className={`w-6 h-6 rounded-full flex items-center justify-center mb-1 ${selectedShipment.status.toLowerCase() === 'pending' ? 'bg-blue-500 text-white' : 'bg-gray-200'}`}>
-                                1
-                              </div>
-                              <span className={selectedShipment.status.toLowerCase() === 'pending' ? 'text-blue-600 font-medium' : ''}>
-                                Pending
-                              </span>
+                            <div className={`flex flex-col items-center ${selectedShipment.status.toLowerCase() === 'pending' ? 'text-blue-600 font-medium' : ''}`}>
+                              <div className={`w-4 h-4 rounded-full mb-1 ${selectedShipment.status.toLowerCase() === 'pending' ? 'bg-blue-500' : 'bg-gray-300'}`}></div>
+                              <span>Pending</span>
                             </div>
-                            <div className="flex flex-col items-center">
-                              <div className={`w-6 h-6 rounded-full flex items-center justify-center mb-1 ${selectedShipment.status.toLowerCase() === 'picked up' ? 'bg-blue-500 text-white' : 'bg-gray-200'}`}>
-                                2
-                              </div>
-                              <span className={selectedShipment.status.toLowerCase() === 'picked up' ? 'text-blue-600 font-medium' : ''}>
-                                Picked Up
-                              </span>
+                            <div className={`flex flex-col items-center ${selectedShipment.status.toLowerCase() === 'pickup requested' ? 'text-yellow-600 font-medium' : ''}`}>
+                              <div className={`w-4 h-4 rounded-full mb-1 ${selectedShipment.status.toLowerCase() === 'pickup requested' ? 'bg-yellow-500' : 'bg-gray-300'}`}></div>
+                              <span>Pickup</span>
                             </div>
-                            <div className="flex flex-col items-center">
-                              <div className={`w-6 h-6 rounded-full flex items-center justify-center mb-1 ${selectedShipment.status.toLowerCase() === 'in transit' ? 'bg-blue-500 text-white' : 'bg-gray-200'}`}>
-                                3
-                              </div>
-                              <span className={selectedShipment.status.toLowerCase() === 'in transit' ? 'text-blue-600 font-medium' : ''}>
-                                In Transit
-                              </span>
+                            <div className={`flex flex-col items-center ${selectedShipment.status.toLowerCase() === 'in transit' ? 'text-blue-600 font-medium' : ''}`}>
+                              <div className={`w-4 h-4 rounded-full mb-1 ${selectedShipment.status.toLowerCase() === 'in transit' ? 'bg-blue-500' : 'bg-gray-300'}`}></div>
+                              <span>In Transit</span>
                             </div>
-                            <div className="flex flex-col items-center">
-                              <div className={`w-6 h-6 rounded-full flex items-center justify-center mb-1 ${selectedShipment.status.toLowerCase() === 'delivered' ? 'bg-green-500 text-white' : 'bg-gray-200'}`}>
-                                4
-                              </div>
-                              <span className={selectedShipment.status.toLowerCase() === 'delivered' ? 'text-green-600 font-medium' : ''}>
-                                Delivered
-                              </span>
+                            <div className={`flex flex-col items-center ${selectedShipment.status.toLowerCase() === 'delivered' ? 'text-green-600 font-medium' : ''}`}>
+                              <div className={`w-4 h-4 rounded-full mb-1 ${selectedShipment.status.toLowerCase() === 'delivered' ? 'bg-green-500' : 'bg-gray-300'}`}></div>
+                              <span>Delivered</span>
                             </div>
                           </div>
                         </div>
                       </div>
                     )}
                     
-                    {/* Shipment Details - Enhanced */}
+                    {/* Shipment Information */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                       <div className="bg-gray-50 p-4 rounded-lg">
                         <h4 className="text-sm font-medium text-gray-700 mb-3">Shipment Information</h4>

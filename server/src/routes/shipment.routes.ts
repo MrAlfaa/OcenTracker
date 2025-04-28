@@ -368,4 +368,95 @@ router.get('/user', authMiddleware, async (req, res) => {
   }
 });
 
+// Driver action: Request pickup (modified from existing pickup route)
+router.put('/driver/:id/request-pickup', authMiddleware, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { notes } = req.body;
+    
+    // Only allow drivers to access this endpoint
+    if (req.user.role !== 'driver') {
+      return res.status(403).json({ message: 'Access denied. Driver role required.' });
+    }
+    
+    const shipment = await Shipment.findById(id);
+    if (!shipment) {
+      return res.status(404).json({ message: 'Shipment not found' });
+    }
+    
+    // Verify this shipment is assigned to the requesting driver
+    if (shipment.driverId !== req.user.id) {
+      return res.status(403).json({ message: 'This shipment is not assigned to you' });
+    }
+    
+    // Update shipment status
+    shipment.status = 'Pickup Requested';
+    shipment.pickupRequested = true;
+    shipment.pickupRequestedAt = new Date();
+    
+    // Add tracking event
+    shipment.trackingHistory.push({
+      status: 'Pickup Requested by Driver',
+      location: 'Sender Location',
+      timestamp: new Date()
+    });
+    
+    // Add notes if provided
+    if (notes) {
+      shipment.notes = notes;
+    }
+    
+    const updatedShipment = await shipment.save();
+    res.json(updatedShipment);
+  } catch (error) {
+    console.error('Error updating shipment pickup request:', error);
+    res.status(500).json({ 
+      message: 'Server error', 
+      error: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+});
+
+// Client action: Confirm pickup
+router.put('/user/:id/confirm-pickup', authMiddleware, async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    const shipment = await Shipment.findById(id);
+    if (!shipment) {
+      return res.status(404).json({ message: 'Shipment not found' });
+    }
+    
+    // Verify this shipment belongs to the requesting user
+    if (shipment.senderId !== req.user.userID) {
+      return res.status(403).json({ message: 'This shipment does not belong to you' });
+    }
+    
+    // Verify pickup was requested
+    if (!shipment.pickupRequested) {
+      return res.status(400).json({ message: 'No pickup request found for this shipment' });
+    }
+    
+    // Update shipment status
+    shipment.status = 'Picked Up';
+    shipment.pickupConfirmed = true;
+    
+    // Add tracking event
+    shipment.trackingHistory.push({
+      status: 'Pickup Confirmed by Sender',
+      location: 'Sender Location',
+      timestamp: new Date()
+    });
+    
+    const updatedShipment = await shipment.save();
+    res.json(updatedShipment);
+  } catch (error) {
+    console.error('Error confirming shipment pickup:', error);
+    res.status(500).json({ 
+      message: 'Server error', 
+      error: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+});
+
 export default router;
