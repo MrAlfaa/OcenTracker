@@ -123,6 +123,14 @@ const shipmentSchema = new Schema(
       enum: ['regular', 'send', 'receive'],
       default: 'regular',
     },
+    driverId: {
+      type: String,
+      trim: true,
+    },
+    driverName: {
+      type: String,
+      trim: true,
+    },
   },
   { timestamps: true }
 );

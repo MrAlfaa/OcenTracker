@@ -341,4 +341,31 @@ router.put('/driver/:id/handover', authMiddleware, async (req, res) => {
   }
 });
 
+// Get shipments for a specific user
+router.get('/user', authMiddleware, async (req, res) => {
+  try {
+    const { status } = req.query;
+    let query: any = { senderId: req.user.userID };
+    
+    // Filter by status if provided
+    if (status && typeof status === 'string') {
+      // Handle comma-separated status values
+      const statusArray = status.split(',');
+      if (statusArray.length > 0) {
+        query.status = { $in: statusArray };
+      }
+    }
+    
+    // This will return all fields including driverName, createdAt, and updatedAt
+    const shipments = await Shipment.find(query).sort({ createdAt: -1 });
+    res.json(shipments);
+  } catch (error) {
+    console.error('Error fetching user shipments:', error);
+    res.status(500).json({ 
+      message: 'Server error', 
+      error: error instanceof Error ? error.message : 'Unknown error' 
+    });
+  }
+});
+
 export default router;
