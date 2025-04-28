@@ -12,4 +12,18 @@ export interface Shipment {
   destination: string;
   estimatedDelivery: string;
   trackingHistory: TrackingEvent[];
+  
+  // Fields for send functionality
+  senderId?: string;
+  senderName?: string;
+  recipientId?: string;
+  recipientName?: string;
+  recipientEmail?: string;
+  recipientAddress?: string;
+  recipientPhone?: string;
+  itemTypes?: string[];
+  branch?: string;
+  notes?: string;
+  requestedDate?: string;
+  shipmentType?: 'regular' | 'send' | 'receive';
 }

@@ -15,8 +15,25 @@ export interface IShipment extends Document {
   trackingHistory: TrackingEvent[];
   createdAt: Date;
   updatedAt: Date;
-}
+  
+  // Fields for send functionality
+  senderId?: string;
+  senderName?: string;
+  recipientId?: string;
+  recipientName?: string;
+  recipientEmail?: string;
+  recipientAddress?: string; // New field
+  recipientPhone?: string;   // New field
+  itemTypes?: string[];
+  branch?: string;
+  notes?: string;
+  requestedDate?: Date;
+  shipmentType?: 'regular' | 'send' | 'receive';
 
+  // New fields for driver assignment
+  driverId?: string;
+  driverName?: string;
+}
 const shipmentSchema = new Schema(
   {
     trackingNumber: {
@@ -28,7 +45,7 @@ const shipmentSchema = new Schema(
     status: {
       type: String,
       required: true,
-      enum: ['Pending', 'In Transit', 'Delivered', 'Delayed', 'Cancelled'],
+      enum: ['Pending', 'In Transit', 'Delivered', 'Delayed', 'Cancelled', 'Picked Up'],
       default: 'Pending',
     },
     origin: {
@@ -59,6 +76,53 @@ const shipmentSchema = new Schema(
         },
       },
     ],
+    
+    // Fields for send functionality
+    senderId: {
+      type: String,
+      trim: true,
+    },
+    senderName: {
+      type: String,
+      trim: true,
+    },
+    recipientId: {
+      type: String,
+      trim: true,
+    },
+    recipientName: {
+      type: String,
+      trim: true,
+    },
+    recipientEmail: {
+      type: String,
+      trim: true,
+    },
+    recipientAddress: {
+      type: String,
+      trim: true,
+    },
+    recipientPhone: {
+      type: String,
+      trim: true,
+    },
+    itemTypes: [String],
+    branch: {
+      type: String,
+      trim: true,
+    },
+    notes: {
+      type: String,
+      trim: true,
+    },
+    requestedDate: {
+      type: Date,
+    },
+    shipmentType: {
+      type: String,
+      enum: ['regular', 'send', 'receive'],
+      default: 'regular',
+    },
   },
   { timestamps: true }
 );
