@@ -79,3 +79,31 @@ export const getDrivers = async (req: Request, res: Response) => {
     res.status(500).json({ message: 'Server error' });
   }
 };
+
+// Search users by name or ID
+export const searchUsers = async (req: Request, res: Response) => {
+  try {
+    const { query } = req.query;
+    
+    if (!query || typeof query !== 'string') {
+      return res.status(400).json({ message: 'Search query is required' });
+    }
+    
+    // Search for users with role 'user' by userID, firstName, or lastName
+    const users = await User.find({
+      role: 'user',
+      $or: [
+        { userID: { $regex: query, $options: 'i' } },
+        { firstName: { $regex: query, $options: 'i' } },
+        { lastName: { $regex: query, $options: 'i' } }
+      ]
+    })
+    .select('userID firstName lastName email')
+    .limit(10);
+    
+    res.json(users);
+  } catch (error) {
+    console.error('User search error:', error);
+    res.status(500).json({ message: 'Server error during user search' });
+  }
+};
