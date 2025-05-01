@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
-import { FaBox, FaExchangeAlt, FaSpinner, FaTruck, FaCheckCircle, FaExclamationTriangle, FaArrowRight, FaClipboardCheck } from 'react-icons/fa';
+import { FaBox, FaExchangeAlt, FaSpinner, FaTruck, FaCheckCircle, FaExclamationTriangle, FaArrowRight, FaClipboardCheck, FaSync } from 'react-icons/fa';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
@@ -98,6 +98,7 @@ const Drivers = () => {
   const [assignedShipments, setAssignedShipments] = useState<Shipment[]>([]);
   const [selectedShipment, setSelectedShipment] = useState<Shipment | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [error, setError] = useState('');
   const [pickupNote, setPickupNote] = useState('');
   const [handoverNote, setHandoverNote] = useState('');
@@ -130,7 +131,7 @@ const Drivers = () => {
 
   const fetchDrivers = async () => {
     try {
-      setIsLoading(true);
+      setIsRefreshing(true);
       const token = localStorage.getItem('token');
       
       const response = await axios.get(
@@ -143,16 +144,19 @@ const Drivers = () => {
       );
       
       setDrivers(response.data);
+      setError('');
       setIsLoading(false);
     } catch (err: any) {
       setError(err.response?.data?.message || 'Error fetching drivers');
       setIsLoading(false);
+    } finally {
+      setIsRefreshing(false);
     }
   };
 
   const fetchDriverShipments = async () => {
     try {
-      setIsLoading(true);
+      setIsRefreshing(true);
       const token = localStorage.getItem('token');
       
       const response = await axios.get(
@@ -165,10 +169,13 @@ const Drivers = () => {
       );
       
       setAssignedShipments(response.data);
+      setError('');
       setIsLoading(false);
     } catch (err: any) {
       setError(err.response?.data?.message || 'Error fetching assigned shipments');
       setIsLoading(false);
+    } finally {
+      setIsRefreshing(false);
     }
   };
 
@@ -242,7 +249,20 @@ const Drivers = () => {
   if (userRole === 'driver') {
     return (
       <div className="container mx-auto px-4 py-8">
-        <h1 className="text-2xl font-bold mb-6">My Assigned Shipments</h1>
+        <div className="flex justify-between items-center mb-6">
+          <h1 className="text-2xl font-bold">My Assigned Shipments</h1>
+          
+          {/* New Refresh Button for Driver View */}
+          <button
+            onClick={fetchDriverShipments}
+            disabled={isRefreshing}
+            className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
+            title="Refresh shipments"
+          >
+            <FaSync className={`mr-2 h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+            {isRefreshing ? 'Refreshing...' : 'Refresh'}
+          </button>
+        </div>
         
         {error && (
           <div className="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 mb-6">
@@ -533,7 +553,20 @@ const Drivers = () => {
     // Admin view - list of drivers
     return (
       <div className="container mx-auto px-4 py-8">
-        <h1 className="text-2xl font-bold mb-6">Drivers Management</h1>
+        <div className="flex justify-between items-center mb-6">
+          <h1 className="text-2xl font-bold">Drivers Management</h1>
+          
+          {/* New Refresh Button for Admin View */}
+          <button
+            onClick={fetchDrivers}
+            disabled={isRefreshing}
+            className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
+            title="Refresh driver list"
+          >
+            <FaSync className={`mr-2 h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+            {isRefreshing ? 'Refreshing...' : 'Refresh'}
+          </button>
+        </div>
         
         {error && (
           <div className="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 mb-6">
@@ -542,10 +575,10 @@ const Drivers = () => {
         )}
         
         <div className="bg-white shadow-md rounded-lg overflow-hidden">
-          {isLoading ? (
+          {isLoading || isRefreshing ? (
             <div className="p-6 text-center">
               <div className="inline-block animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-500"></div>
-              <p className="mt-2 text-gray-600">Loading drivers...</p>
+              <p className="mt-2 text-gray-600">{isRefreshing ? 'Refreshing drivers...' : 'Loading drivers...'}</p>
             </div>
           ) : drivers.length === 0 ? (
             <div className="p-6 text-center text-gray-500">
