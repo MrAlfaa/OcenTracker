@@ -4,6 +4,7 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import userRoutes from './routes/user.routes';
 import adminRoutes from './routes/admin.routes'
+import reportRoutes from './routes/report.routes';
 
 // Routes
 import shipmentRoutes from './routes/shipment.routes';
@@ -29,6 +30,7 @@ app.use('/api/shipments', shipmentRoutes);
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/reports', reportRoutes);
 
 // Base route
 app.get('/', (req, res) => {
