@@ -107,3 +107,86 @@ export const searchUsers = async (req: Request, res: Response) => {
     res.status(500).json({ message: 'Server error during user search' });
   }
 };
+
+// Get all users (for admin)
+export const getAllUsers = async (req: Request, res: Response) => {
+  try {
+    // Check if user has appropriate role
+    if (req.user.role !== 'admin' && req.user.role !== 'superAdmin') {
+      return res.status(403).json({ message: 'Unauthorized. Admin privileges required.' });
+    }
+
+    // Get users (exclude passwords)
+    const users = await User.find({ role: { $ne: 'superAdmin' } })
+      .select('-password')
+      .sort({ createdAt: -1 });
+    
+    res.json(users);
+  } catch (error) {
+    console.error('Get all users error:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
+// Get user by ID (for admin)
+export const getUserById = async (req: Request, res: Response) => {
+  try {
+    // Check if user has appropriate role
+    if (req.user.role !== 'admin' && req.user.role !== 'superAdmin') {
+      return res.status(403).json({ message: 'Unauthorized. Admin privileges required.' });
+    }
+
+    const { id } = req.params;
+    
+    // Get user by ID (exclude password)
+    const user = await User.findById(id).select('-password');
+    
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+    
+    res.json(user);
+  } catch (error) {
+    console.error('Get user by ID error:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
+// Update user status (activate/deactivate)
+export const updateUserStatus = async (req: Request, res: Response) => {
+  try {
+    // Check if user has appropriate role
+    if (req.user.role !== 'admin' && req.user.role !== 'superAdmin') {
+      return res.status(403).json({ message: 'Unauthorized. Admin privileges required.' });
+    }
+
+    const { id } = req.params;
+    const { active } = req.body;
+    
+    // Don't allow superAdmins to be deactivated
+    const userToUpdate = await User.findById(id);
+    if (!userToUpdate) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+    
+    if (userToUpdate.role === 'superAdmin') {
+      return res.status(403).json({ message: 'Super Admin accounts cannot be modified' });
+    }
+    
+    // Update user status
+    const updatedUser = await User.findByIdAndUpdate(
+      id,
+      { active: active },
+      { new: true }
+    ).select('-password');
+    
+    if (!updatedUser) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+    
+    res.json(updatedUser);
+  } catch (error) {
+    console.error('Update user status error:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+};

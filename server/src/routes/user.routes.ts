@@ -1,23 +1,25 @@
 import express from 'express';
-import { createUser, getDrivers, searchUsers } from '../controllers/user.controller';
+import { 
+  createUser, 
+  getDrivers, 
+  getAllUsers, 
+  getUserById, 
+  updateUserStatus,
+  searchUsers 
+} from '../controllers/user.controller';
 import { authMiddleware } from '../middleware/auth.middleware';
 import { adminAuthMiddleware } from '../middleware/adminAuth.middleware';
 
 const router = express.Router();
 
-// Create user (admin/driver) - only accessible by superAdmin
+// Admin routes for user management
+router.get('/all', authMiddleware, adminAuthMiddleware, getAllUsers);
+router.get('/:id', authMiddleware, adminAuthMiddleware, getUserById);
+router.put('/:id/status', authMiddleware, adminAuthMiddleware, updateUserStatus);
+
+// Existing routes
 router.post('/create', authMiddleware, createUser);
-
-// Get all drivers - accessible by admin, superAdmin, and driver roles
 router.get('/drivers', authMiddleware, getDrivers);
-
-// Get a specific driver by ID
-router.get('/drivers/:id', authMiddleware, adminAuthMiddleware, /* getDriverById */);
-
-// Update driver information (for future implementation)
-router.put('/drivers/:id', authMiddleware, adminAuthMiddleware, /* updateDriver */);
-
-// Search users - protected route
 router.get('/search', authMiddleware, searchUsers);
 
 export default router;
