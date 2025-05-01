@@ -3,6 +3,7 @@ import mongoose from 'mongoose';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import userRoutes from './routes/user.routes';
+import adminRoutes from './routes/admin.routes'
 
 // Routes
 import shipmentRoutes from './routes/shipment.routes';
@@ -27,6 +28,7 @@ mongoose
 app.use('/api/shipments', shipmentRoutes);
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
+app.use('/api/admin', adminRoutes);
 
 // Base route
 app.get('/', (req, res) => {
