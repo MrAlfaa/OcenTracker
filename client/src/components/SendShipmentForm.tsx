@@ -60,7 +60,10 @@ const SendShipmentForm: React.FC<SendShipmentFormProps> = ({ onShipmentCreated }
 
   const searchUsers = async () => {
     try {
-      const response = await fetch(`${apiUrl}/api/users/search?query=${searchTerm}`, {
+      setIsSearching(true);
+      
+      // Use the new recipients search endpoint instead
+      const response = await fetch(`${apiUrl}/api/users/recipients/search?query=${encodeURIComponent(searchTerm)}`, {
         headers: {
           'Content-Type': 'application/json',
           'x-auth-token': token || ''
@@ -68,17 +71,15 @@ const SendShipmentForm: React.FC<SendShipmentFormProps> = ({ onShipmentCreated }
       });
       
       if (!response.ok) {
-        throw new Error('Failed to search users');
+        const errorData = await response.json().catch(() => ({}));
+        console.error('Search API error:', response.status, errorData);
+        throw new Error(`Failed to search users: ${errorData.message || response.statusText}`);
       }
       
       const data = await response.json();
       
-      // Filter out the current logged-in user from search results
-      const filteredResults = data.filter((searchUser: User) => 
-        searchUser.userID !== (user?.userID?.toString())
-      );
-      
-      setSearchResults(filteredResults);
+      // No need to filter out the current user as that's now done server-side
+      setSearchResults(data);
       setIsSearching(false);
     } catch (err) {
       console.error('Error searching users:', err);

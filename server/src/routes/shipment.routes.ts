@@ -115,9 +115,12 @@ router.get('/admin', authMiddleware, adminAuthMiddleware, async (req, res) => {
     const { status, search } = req.query;
     let query = {};
     
+    console.log('Admin shipments query:', { status, search });
+    
     // Filter by status if provided
     if (status && typeof status === 'string') {
-      query = { ...query, status };
+      // Use exact case matching for status
+      query = { ...query, status: status };
     }
     
     // Search by tracking number, sender, or recipient
@@ -132,7 +135,11 @@ router.get('/admin', authMiddleware, adminAuthMiddleware, async (req, res) => {
       };
     }
     
+    console.log('MongoDB query:', JSON.stringify(query));
+    
     const shipments = await Shipment.find(query).sort({ createdAt: -1 });
+    console.log(`Found ${shipments.length} shipments matching criteria`);
+    
     res.json(shipments);
   } catch (error) {
     console.error('Error fetching shipments:', error);

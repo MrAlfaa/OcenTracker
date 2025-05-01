@@ -73,6 +73,7 @@ export const getDrivers = async (req: Request, res: Response) => {
       .select('-password')
       .sort({ createdAt: -1 });
     
+    console.log(`Found ${drivers.length} drivers`);
     res.json(drivers);
   } catch (error) {
     console.error('Get drivers error:', error);
@@ -105,6 +106,38 @@ export const searchUsers = async (req: Request, res: Response) => {
   } catch (error) {
     console.error('User search error:', error);
     res.status(500).json({ message: 'Server error during user search' });
+  }
+};
+
+// Search recipients for sending packages (accessible to regular users)
+export const searchRecipients = async (req: Request, res: Response) => {
+  try {
+    const { query } = req.query;
+    
+    if (!query || typeof query !== 'string') {
+      return res.status(400).json({ message: 'Search query is required' });
+    }
+    
+    // Don't allow users to search for themselves
+    const currentUserID = req.user.userID;
+    
+    // Search for users with role 'user' by userID, firstName, or lastName
+    const users = await User.find({
+      role: 'user',
+      userID: { $ne: currentUserID }, // Exclude the current user
+      $or: [
+        { userID: { $regex: query, $options: 'i' } },
+        { firstName: { $regex: query, $options: 'i' } },
+        { lastName: { $regex: query, $options: 'i' } }
+      ]
+    })
+    .select('userID firstName lastName email')
+    .limit(10);
+    
+    res.json(users);
+  } catch (error) {
+    console.error('Recipient search error:', error);
+    res.status(500).json({ message: 'Server error during recipient search' });
   }
 };
 

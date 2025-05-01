@@ -306,6 +306,12 @@ const Shipments = () => {
               <option value="Delivered">Delivered</option>
               <option value="Delayed">Delayed</option>
               <option value="Cancelled">Cancelled</option>
+              <option value="Pickup Requested">Pickup Requested</option>
+              <option value="Picked Up">Picked Up</option>
+              <option value="Handover Requested">Handover Requested</option>
+              <option value="Handover Confirmed">Handover Confirmed</option>
+              <option value="Delivered To Recipient">Delivered To Recipient</option>
+              <option value="Delivery Completed">Delivery Completed</option>
             </select>          </div>
           
           <div>
