@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { Shipment } from '../types/shipment';
 import { Link } from 'react-router-dom';
-import { FaBox, FaSpinner, FaTruck, FaCheckCircle, FaTimesCircle, FaExclamationTriangle, FaShippingFast, FaMapMarkedAlt, FaPrint, FaSearch } from 'react-icons/fa';
+import { FaBox,FaExchangeAlt, FaSpinner, FaTruck, FaCheckCircle, FaTimesCircle, FaExclamationTriangle, FaShippingFast, FaMapMarkedAlt, FaPrint, FaSearch } from 'react-icons/fa';
 
 // Status badge component
 const StatusBadge: React.FC<{ status: string }> = ({ status }) => {
@@ -18,13 +18,17 @@ const StatusBadge: React.FC<{ status: string }> = ({ status }) => {
       bgColor = 'bg-yellow-100 text-yellow-800';
       icon = <FaTruck className="mr-1" />;
       break;
-    case 'in transit':
-      bgColor = 'bg-blue-100 text-blue-800';
-      icon = <FaTruck className="mr-1" />;
-      break;
     case 'picked up':
       bgColor = 'bg-purple-100 text-purple-800';
       icon = <FaBox className="mr-1" />;
+      break;
+    case 'handover requested':
+      bgColor = 'bg-yellow-100 text-yellow-800';
+      icon = <FaExchangeAlt className="mr-1" />;
+      break;
+    case 'in transit':
+      bgColor = 'bg-blue-100 text-blue-800';
+      icon = <FaTruck className="mr-1" />;
       break;
     case 'delivered':
       bgColor = 'bg-green-100 text-green-800';

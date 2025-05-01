@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
-import { FaBox, FaSpinner, FaTruck, FaCheckCircle, FaExclamationTriangle, FaArrowRight, FaClipboardCheck } from 'react-icons/fa';
+import { FaBox, FaExchangeAlt, FaSpinner, FaTruck, FaCheckCircle, FaExclamationTriangle, FaArrowRight, FaClipboardCheck } from 'react-icons/fa';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
@@ -31,6 +31,15 @@ interface Shipment {
   trackingHistory: TrackingEvent[];
   createdAt: string;
   updatedAt: string;
+  handoverRequested?: boolean;
+  handoverConfirmed?: boolean;
+  handoverRequestedAt?: string;
+  handoverNote?: string;
+  adminHandoverNote?: string;
+  // Add these properties for pickup functionality
+  pickupRequested?: boolean;
+  pickupConfirmed?: boolean;
+  pickupRequestedAt?: string;
 }
 
 interface Driver {
@@ -69,6 +78,10 @@ const StatusBadge = ({ status }: { status: string }) => {
       bgColor = 'bg-orange-100 text-orange-800';
       icon = <FaExclamationTriangle className="mr-1" />;
       break;
+    case 'handover requested':
+      bgColor = 'bg-yellow-100 text-yellow-800';
+      icon = <FaExchangeAlt className="mr-1" />;
+      break;
   }
 
   return (
@@ -90,6 +103,7 @@ const Drivers = () => {
   const [handoverNote, setHandoverNote] = useState('');
   const [processingAction, setProcessingAction] = useState(false);
   const [actionSuccess, setActionSuccess] = useState('');
+  const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
   useEffect(() => {
     // Get user role from token
@@ -193,7 +207,7 @@ const Drivers = () => {
       const token = localStorage.getItem('token');
       
       await axios.put(
-        `${API_URL}/api/shipments/driver/${shipmentId}/handover`,
+        `${API_URL}/api/shipments/driver/${shipmentId}/request-handover`,
         { 
           notes: handoverNote,
           branchLocation: selectedShipment?.destination 
@@ -208,13 +222,13 @@ const Drivers = () => {
       // Refresh shipments
       fetchDriverShipments();
       setHandoverNote('');
-      setActionSuccess('Package handed over to branch successfully!');
+      setActionSuccess('Handover request sent successfully! Waiting for admin confirmation.');
       
       // Clear success message after 3 seconds
       setTimeout(() => setActionSuccess(''), 3000);
       setProcessingAction(false);
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Error updating shipment');
+      setError(err.response?.data?.message || 'Error requesting handover');
       setProcessingAction(false);
     }
   };
@@ -428,33 +442,41 @@ const Drivers = () => {
                     )}
                     
                     {selectedShipment.status === 'Picked Up' && (
-                      <div className="space-y-4">
-                        <div className="bg-purple-50 p-4 rounded-md border border-purple-100">
-                          <h4 className="text-sm font-medium text-purple-800 mb-2">Hand Over to Branch</h4>
-                          <p className="text-xs text-purple-600 mb-3">
-                            Use this action when you have delivered the package to the destination branch.
-                          </p>
-                          <div className="space-y-3">
-                            <textarea
-                              value={handoverNote}
-                              onChange={(e) => setHandoverNote(e.target.value)}
-                              placeholder="Add notes about the handover (optional)"
-                              className="shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border-gray-300 rounded-md"
-                              rows={2}
-                            />
-                            <button
-                              onClick={() => handleHandover(selectedShipment._id)}
-                              disabled={processingAction}
-                              className="w-full inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-purple-600 hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500"
-                            >
-                              {processingAction ? (
-                                <FaSpinner className="animate-spin mr-2" />
-                              ) : (
-                                <FaArrowRight className="mr-2" />
-                              )}
-                              Confirm Handover
-                            </button>
-                          </div>
+                      <div className="mt-4">
+                        <h4 className="text-sm font-medium text-gray-700 mb-2">Request Handover to Branch</h4>
+                        <div className="space-y-3">
+                          <textarea
+                            value={handoverNote}
+                            onChange={(e) => setHandoverNote(e.target.value)}
+                            placeholder="Add notes about this handover (optional)"
+                            rows={2}
+                            className="shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border-gray-300 rounded-md"
+                          />
+                          <button
+                            onClick={() => handleHandover(selectedShipment._id)}
+                            disabled={processingAction}
+                            className="w-full inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:bg-blue-300"
+                          >
+                            {processingAction ? (
+                              <FaSpinner className="animate-spin mr-2" />
+                            ) : (
+                              <FaExchangeAlt className="mr-2" />
+                            )}
+                            Request Handover to Branch
+                          </button>
+                        </div>
+                      </div>
+                    )}
+
+                    {selectedShipment.status === 'Handover Requested' && (
+                      <div className="mt-4 bg-yellow-50 p-4 rounded-md border border-yellow-100">
+                        <h4 className="text-sm font-medium text-yellow-800 mb-2">Handover Confirmation Pending</h4>
+                        <p className="text-xs text-yellow-600 mb-3">
+                          Waiting for admin to confirm your handover request.
+                        </p>
+                        <div className="flex items-center justify-center">
+                          <FaSpinner className="animate-spin text-yellow-500 mr-2" />
+                          <span className="text-sm text-yellow-700">Awaiting confirmation...</span>
                         </div>
                       </div>
                     )}
@@ -495,87 +517,90 @@ const Drivers = () => {
                 </div>
               </div>
             ) : (
-              <div className="bg-white shadow-md rounded-lg p-6 text-center">
+              <div className="bg-white shadow-md rounded-lg p-8 text-center">
                 <FaBox className="mx-auto h-12 w-12 text-gray-300 mb-4" />
-                <p className="text-gray-500">Select a shipment to view details and perform actions.</p>
+                <h3 className="text-lg font-medium text-gray-900 mb-2">Select a shipment</h3>
+                <p className="text-gray-500">
+                  Click on a shipment from the list to view details and perform actions.
+                </p>
               </div>
             )}
           </div>
         )}
       </div>
     );
-  }
-  
-  // Admin view - show all drivers
-  return (
-    <div className="container mx-auto px-4 py-8">
-      <h1 className="text-2xl font-bold mb-6">Drivers Management</h1>
-      
-      {error && (
-        <div className="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 mb-6">
-          <p>{error}</p>
-        </div>
-      )}
-      
-      <div className="bg-white shadow-md rounded-lg overflow-hidden">
-        {isLoading ? (
-          <div className="p-6 text-center">
-            <div className="inline-block animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-500"></div>
-            <p className="mt-2 text-gray-600">Loading drivers...</p>
+  } else {
+    // Admin view - list of drivers
+    return (
+      <div className="container mx-auto px-4 py-8">
+        <h1 className="text-2xl font-bold mb-6">Drivers Management</h1>
+        
+        {error && (
+          <div className="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 mb-6">
+            <p>{error}</p>
           </div>
-        ) : drivers.length === 0 ? (
-          <div className="p-6 text-center text-gray-500">
-            No drivers found
-          </div>
-        ) : (
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Driver ID
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Name
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Email
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Company
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Created At
-                </th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {drivers.map((driver) => (
-                <tr key={driver._id} className="hover:bg-gray-50">
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm font-medium text-gray-900">{driver.userID}</div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm text-gray-900">{driver.firstName} {driver.lastName}</div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm text-gray-900">{driver.email}</div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm text-gray-900">{driver.company || 'N/A'}</div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm text-gray-900">
-                      {new Date(driver.createdAt).toLocaleDateString()}
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
         )}
+        
+        <div className="bg-white shadow-md rounded-lg overflow-hidden">
+          {isLoading ? (
+            <div className="p-6 text-center">
+              <div className="inline-block animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-500"></div>
+              <p className="mt-2 text-gray-600">Loading drivers...</p>
+            </div>
+          ) : drivers.length === 0 ? (
+            <div className="p-6 text-center text-gray-500">
+              No drivers found
+            </div>
+          ) : (
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Driver ID
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Name
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Email
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Company
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Created At
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {drivers.map((driver) => (
+                  <tr key={driver._id} className="hover:bg-gray-50">
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="text-sm font-medium text-gray-900">{driver.userID}</div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="text-sm text-gray-900">{driver.firstName} {driver.lastName}</div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="text-sm text-gray-900">{driver.email}</div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="text-sm text-gray-900">{driver.company || 'N/A'}</div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="text-sm text-gray-900">
+                        {new Date(driver.createdAt).toLocaleDateString()}
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </div>
       </div>
-    </div>
-  );
+    );
+  }
 };
 
 export default Drivers;

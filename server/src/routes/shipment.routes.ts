@@ -459,4 +459,88 @@ router.put('/user/:id/confirm-pickup', authMiddleware, async (req, res) => {
   }
 });
 
+// Driver action: Request handover to branch
+router.put('/driver/:id/request-handover', authMiddleware, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { notes, branchLocation } = req.body;
+    
+    // Only allow drivers to access this endpoint
+    if (req.user.role !== 'driver') {
+      return res.status(403).json({ message: 'Access denied. Driver role required.' });
+    }
+    
+    const shipment = await Shipment.findById(id);
+    if (!shipment) {
+      return res.status(404).json({ message: 'Shipment not found' });
+    }
+    
+    // Verify this shipment is assigned to the requesting driver
+    if (shipment.driverId !== req.user.id) {
+      return res.status(403).json({ message: 'This shipment is not assigned to you' });
+    }
+    
+    // Update shipment status
+    shipment.status = 'Handover Requested';
+    shipment.handoverRequested = true;
+    shipment.handoverRequestedAt = new Date();
+    shipment.handoverNote = notes || '';
+    
+    // Add tracking event
+    shipment.trackingHistory.push({
+      status: 'Handover Requested by Driver',
+      location: branchLocation || shipment.destination,
+      timestamp: new Date()
+    });
+    
+    const updatedShipment = await shipment.save();
+    res.json(updatedShipment);
+  } catch (error) {
+    console.error('Error requesting shipment handover:', error);
+    res.status(500).json({ 
+      message: 'Server error', 
+      error: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+});
+
+// Admin action: Confirm handover
+router.put('/admin/:id/confirm-handover', authMiddleware, adminAuthMiddleware, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { adminNote } = req.body;
+    
+    const shipment = await Shipment.findById(id);
+    if (!shipment) {
+      return res.status(404).json({ message: 'Shipment not found' });
+    }
+    
+    // Verify handover was requested
+    if (!shipment.handoverRequested) {
+      return res.status(400).json({ message: 'No handover request found for this shipment' });
+    }
+    
+    // Update shipment status
+    shipment.status = 'In Transit';
+    shipment.handoverConfirmed = true;
+    shipment.adminHandoverNote = adminNote || '';
+    
+    // Add tracking event
+    shipment.trackingHistory.push({
+      status: 'Handover Confirmed by Admin',
+      location: shipment.destination,
+      timestamp: new Date()
+    });
+    
+    const updatedShipment = await shipment.save();
+    res.json(updatedShipment);
+  } catch (error) {
+    console.error('Error confirming shipment handover:', error);
+    res.status(500).json({ 
+      message: 'Server error', 
+      error: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+});
+
 export default router;

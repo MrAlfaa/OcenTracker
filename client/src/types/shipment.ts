@@ -36,6 +36,13 @@ export interface Shipment {
   pickupConfirmed?: boolean;
   pickupRequestedAt?: string;
   
+  // New fields for handover confirmation
+  handoverRequested?: boolean;
+  handoverConfirmed?: boolean;
+  handoverRequestedAt?: string;
+  handoverNote?: string;
+  adminHandoverNote?: string;
+  
   // Timestamps
   createdAt: string;
   updatedAt: string;
