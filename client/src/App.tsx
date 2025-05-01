@@ -9,6 +9,7 @@ import ContactPage from './pages/ContactPage'
 import LoginPage from './pages/LoginPage'
 import RegisterPage from './pages/RegisterPage'
 import DashboardPage from './pages/DashboardPage'
+import MapViewPage from './pages/MapViewPage'
 import InitialRedirect from './components/InitialRedirect'
 import { AuthProvider } from './context/AuthContext'
 import PrivateRoute from './components/PrivateRoute'
@@ -32,6 +33,14 @@ function App() {
               <Route path="/contact" element={<ContactPage />} />
               <Route path="/login" element={<LoginPage />} />
               <Route path="/register" element={<RegisterPage />} />
+              <Route 
+                path="/map-view" 
+                element={
+                  <PrivateRoute>
+                    <MapViewPage />
+                  </PrivateRoute>
+                } 
+              />
               <Route 
                 path="/dashboard" 
                 element={

@@ -621,7 +621,7 @@ const ShipmentsPage: React.FC = () => {
                     {/* Action Buttons - Enhanced */}
                     <div className="mt-8 border-t border-gray-200 pt-6 flex flex-wrap gap-4 justify-between">
                       <Link
-                        to={`/tracking?tracking=${selectedShipment.trackingNumber}`}
+                        to={`/map-view?tracking=${selectedShipment.trackingNumber}`}
                         className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
                       >
                         <FaMapMarkedAlt className="mr-2 -ml-1" />
