@@ -45,7 +45,7 @@ const Sidebar = ({ isOpen, isMobileOpen, toggleSidebar, closeMobileMenu }: Sideb
     { name: 'Users', path: '/users', icon: 'users', roles: ['admin', 'superAdmin'] },
     { name: 'Shipments', path: '/shipments', icon: 'truck', roles: ['admin', 'superAdmin'] },
     { name: 'Role Creation', path: '/role-creation', icon: 'user-plus', roles: ['superAdmin'] },
-    { name: 'Drivers', path: '/drivers', icon: 'truck-driver', roles: ['admin', 'superAdmin', 'driver'] },
+    { name: 'Drivers', path: '/drivers', icon: 'truck-driver', roles: [ 'driver'] },
     { name: 'Reports', path: '/reports', icon: 'chart-bar', roles: ['admin', 'superAdmin'] },
     { name: 'Settings', path: '/settings', icon: 'cog', roles: ['admin', 'superAdmin'] },
   ];
