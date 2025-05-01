@@ -12,7 +12,11 @@ const TrackingPage: React.FC = () => {
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [serviceTab, setServiceTab] = useState<'send' | 'receive'>('send');
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, token, user } = useAuth();
+  const [recentlyCreatedShipment, setRecentlyCreatedShipment] = useState<string | null>(null);
+  const [incomingShipments, setIncomingShipments] = useState<Shipment[]>([]);
+  const [loadingIncomingShipments, setLoadingIncomingShipments] = useState<boolean>(false);
+  const [incomingShipmentsError, setIncomingShipmentsError] = useState<string | null>(null);
 
   const trackShipment = async (trackingNumber: string) => {
     setLoading(true);
@@ -47,8 +51,6 @@ const TrackingPage: React.FC = () => {
     }
   };
 
-  const [recentlyCreatedShipment, setRecentlyCreatedShipment] = useState<string | null>(null);
-
   const handleShipmentCreated = (newShipment: Shipment) => {
     setRecentlyCreatedShipment(newShipment.trackingNumber);
     // Set the service tab to 'send' (as it doesn't have a 'track' option)
@@ -58,6 +60,53 @@ const TrackingPage: React.FC = () => {
     setTimeout(() => {
       setRecentlyCreatedShipment(null);
     }, 10000); // Clear after 10 seconds
+  };
+
+  // Fetch incoming shipments for the user
+  const fetchIncomingShipments = async () => {
+    if (!isAuthenticated || !token) return;
+    
+    setLoadingIncomingShipments(true);
+    setIncomingShipmentsError(null);
+    
+    try {
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+      const response = await fetch(`${apiUrl}/api/shipments/incoming`, {
+        headers: {
+          'Content-Type': 'application/json',
+          'x-auth-token': token
+        }
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to fetch incoming shipments');
+      }
+      
+      const data = await response.json();
+      setIncomingShipments(data);
+    } catch (err) {
+      console.error('Error fetching incoming shipments:', err);
+      setIncomingShipmentsError(err instanceof Error ? err.message : 'An error occurred while fetching your incoming shipments');
+    } finally {
+      setLoadingIncomingShipments(false);
+    }
+  };
+
+  // Fetch incoming shipments when the receive tab is selected and user is authenticated
+  useEffect(() => {
+    if (serviceTab === 'receive' && isAuthenticated) {
+      fetchIncomingShipments();
+    }
+  }, [serviceTab, isAuthenticated]);
+
+  // Format date for better display
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString(undefined, {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric'
+    });
   };
 
   return (
@@ -165,6 +214,18 @@ const TrackingPage: React.FC = () => {
                       </p>
                     </div>
                     
+                    {recentlyCreatedShipment && (
+                      <div className="bg-green-50 border-l-4 border-green-500 p-4 rounded mb-6">
+                        <div className="flex">
+                          <div className="ml-3">
+                            <p className="text-sm text-green-700">
+                              Shipment created successfully! Your tracking number is <span className="font-bold">{recentlyCreatedShipment}</span>
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                    
                     {!isAuthenticated ? (
                       <div className="bg-yellow-50 border border-yellow-100 rounded-lg p-6">
                         <div className="flex">
@@ -204,18 +265,121 @@ const TrackingPage: React.FC = () => {
                     exit={{ opacity: 0, y: -10 }}
                     transition={{ duration: 0.3 }}
                   >
-                    <div className="py-12 text-center">
-                      <div className="inline-block p-4 bg-blue-100 rounded-full mb-6">
-                        <FaBoxOpen className="text-4xl text-blue-600" />
-                      </div>
-                      <h3 className="text-2xl font-semibold text-gray-800 mb-3">Receive Package</h3>
-                      <p className="text-gray-600 text-lg mb-6 max-w-md mx-auto">
-                        We're working on this feature! Soon you'll be able to manage incoming packages with ease.
+                    <div className="mb-6">
+                      <h2 className="text-2xl font-bold text-gray-800 mb-3">Receive Package</h2>
+                      <p className="text-gray-600">
+                        View and manage packages that are being sent to you.
                       </p>
-                      <span className="inline-flex items-center px-4 py-2 border border-blue-300 text-sm font-medium rounded-md text-blue-700 bg-blue-50">
-                        Coming Soon
-                      </span>
                     </div>
+                    
+                    {!isAuthenticated ? (
+                      <div className="bg-yellow-50 border border-yellow-100 rounded-lg p-6">
+                        <div className="flex">
+                          <div className="flex-shrink-0">
+                            <svg className="h-6 w-6 text-yellow-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                            </svg>
+                          </div>
+                          <div className="ml-4">
+                            <h3 className="text-lg font-medium text-yellow-800">Authentication Required</h3>
+                            <p className="mt-1 text-yellow-700">
+                              Please <a href="/login" className="font-medium underline text-yellow-800 hover:text-yellow-900">sign in</a> to 
+                              view packages being sent to you.
+                            </p>
+                            <div className="mt-3">
+                              <a href="/login" className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-yellow-600 hover:bg-yellow-700">
+                                Sign In
+                              </a>
+                              <a href="/register" className="ml-3 inline-flex items-center px-4 py-2 border border-yellow-300 text-sm font-medium rounded-md text-yellow-700 bg-white hover:bg-yellow-50">
+                                Create Account
+                              </a>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    ) : loadingIncomingShipments ? (
+                      <div className="bg-blue-50 rounded-lg p-8 text-center mt-6">
+                        <FaSpinner className="animate-spin text-blue-600 text-3xl mx-auto mb-4" />
+                        <p className="text-blue-800 font-medium">Loading your incoming packages...</p>
+                      </div>
+                    ) : incomingShipmentsError ? (
+                      <div className="bg-red-50 border-l-4 border-red-500 p-4 rounded-lg mt-6" role="alert">
+                        <div className="flex">
+                          <div className="flex-shrink-0">
+                            <svg className="h-5 w-5 text-red-500" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                              <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                            </svg>
+                          </div>
+                          <div className="ml-3">
+                            <p className="text-sm text-red-700">{incomingShipmentsError}</p>
+                          </div>
+                        </div>
+                      </div>
+                    ) : incomingShipments.length === 0 ? (
+                      <div className="bg-gray-50 rounded-lg p-8 text-center">
+                        <FaBoxOpen className="text-gray-400 text-5xl mx-auto mb-4" />
+                        <h3 className="text-xl font-medium text-gray-700 mb-2">No Incoming Packages</h3>
+                        <p className="text-gray-600">
+                          You don't have any packages addressed to you at the moment.
+                        </p>
+                      </div>
+                    ) : (
+                      <div className="space-y-6">
+                        {incomingShipments.map((incomingShipment) => (
+                          <div key={incomingShipment._id} className="bg-white border border-gray-200 rounded-lg shadow-sm hover:shadow-md transition-shadow">
+                            <div className="p-4 border-b border-gray-100 flex justify-between items-center">
+                              <div>
+                                <h3 className="text-lg font-medium text-gray-900">
+                                  Tracking #: {incomingShipment.trackingNumber}
+                                </h3>
+                                <p className="text-sm text-gray-500">
+                                  From: {incomingShipment.senderName}
+                                </p>
+                              </div>
+                              <div>
+                                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                                  {incomingShipment.status}
+                                </span>
+                              </div>
+                            </div>
+                            <div className="p-4 flex flex-col sm:flex-row sm:justify-between sm:items-center">
+                              <div className="mb-2 sm:mb-0">
+                                <p className="text-sm text-gray-600">
+                                  <span className="font-medium">Origin:</span> {incomingShipment.origin}
+                                </p>
+                                <p className="text-sm text-gray-600">
+                                  <span className="font-medium">Destination:</span> {incomingShipment.destination}
+                                </p>
+                                <p className="text-sm text-gray-600">
+                                  <span className="font-medium">Expected Delivery:</span> {formatDate(incomingShipment.estimatedDelivery)}
+                                </p>
+                                {incomingShipment.itemTypes && incomingShipment.itemTypes.length > 0 && (
+                                  <div className="mt-2">
+                                    <p className="text-sm text-gray-600 font-medium mb-1">Item Types:</p>
+                                    <div className="flex flex-wrap gap-1">
+                                      {incomingShipment.itemTypes.map((type, index) => (
+                                        <span key={index} className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-800">
+                                          {type}
+                                        </span>
+                                      ))}
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
+                              <div className="mt-4 sm:mt-0">
+                                <button
+                                  onClick={() => trackShipment(incomingShipment.trackingNumber)}
+                                  className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                                >
+                                  <FaSearch className="mr-1.5 -ml-0.5" />
+                                  Track Details
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </motion.div>
                 )}
               </AnimatePresence>

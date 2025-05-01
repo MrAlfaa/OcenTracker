@@ -543,4 +543,25 @@ router.put('/admin/:id/confirm-handover', authMiddleware, adminAuthMiddleware, a
   }
 });
 
+// Get incoming shipments (where the user is a recipient)
+router.get('/incoming', authMiddleware, async (req, res) => {
+  try {
+    const { userID } = req.user;
+    
+    // Find shipments where the logged-in user is the recipient
+    const shipments = await Shipment.find({ 
+      recipientId: userID,
+      status: { $ne: 'Delivered' } // Exclude already delivered shipments
+    }).sort({ createdAt: -1 });
+    
+    res.json(shipments);
+  } catch (error) {
+    console.error('Error fetching incoming shipments:', error);
+    res.status(500).json({ 
+      message: 'Server error', 
+      error: error instanceof Error ? error.message : 'Unknown error' 
+    });
+  }
+});
+
 export default router;
