@@ -22,8 +22,8 @@ export interface IShipment extends Document {
   recipientId?: string;
   recipientName?: string;
   recipientEmail?: string;
-  recipientAddress?: string; // New field
-  recipientPhone?: string;   // New field
+  recipientAddress?: string;
+  recipientPhone?: string;
   itemTypes?: string[];
   branch?: string;
   notes?: string;
@@ -33,7 +33,13 @@ export interface IShipment extends Document {
   // New fields for driver assignment
   driverId?: string;
   driverName?: string;
+  
+  // New fields for pickup confirmation
+  pickupRequested?: boolean;
+  pickupConfirmed?: boolean;
+  pickupRequestedAt?: Date;
 }
+
 const shipmentSchema = new Schema(
   {
     trackingNumber: {
@@ -45,7 +51,7 @@ const shipmentSchema = new Schema(
     status: {
       type: String,
       required: true,
-      enum: ['Pending', 'In Transit', 'Delivered', 'Delayed', 'Cancelled', 'Picked Up'],
+      enum: ['Pending', 'In Transit', 'Delivered', 'Delayed', 'Cancelled', 'Pickup Requested', 'Picked Up'],
       default: 'Pending',
     },
     origin: {
@@ -123,6 +129,27 @@ const shipmentSchema = new Schema(
       enum: ['regular', 'send', 'receive'],
       default: 'regular',
     },
+    // Driver assignment fields
+    driverId: {
+      type: String,
+      trim: true,
+    },
+    driverName: {
+      type: String,
+      trim: true,
+    },
+    // Pickup confirmation fields
+    pickupRequested: {
+      type: Boolean,
+      default: false
+    },
+    pickupConfirmed: {
+      type: Boolean,
+      default: false
+    },
+    pickupRequestedAt: {
+      type: Date
+    }
   },
   { timestamps: true }
 );

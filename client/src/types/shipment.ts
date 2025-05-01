@@ -26,4 +26,17 @@ export interface Shipment {
   notes?: string;
   requestedDate?: string;
   shipmentType?: 'regular' | 'send' | 'receive';
+  
+  // New fields for driver assignment
+  driverId?: string;
+  driverName?: string;
+  
+  // New fields for pickup confirmation
+  pickupRequested?: boolean;
+  pickupConfirmed?: boolean;
+  pickupRequestedAt?: string;
+  
+  // Timestamps
+  createdAt: string;
+  updatedAt: string;
 }

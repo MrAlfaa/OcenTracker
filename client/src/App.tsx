@@ -10,6 +10,7 @@ import DashboardPage from './pages/DashboardPage'
 import InitialRedirect from './components/InitialRedirect'
 import { AuthProvider } from './context/AuthContext'
 import PrivateRoute from './components/PrivateRoute'
+import ShipmentsPage from './pages/ShipmentsPage'
 import './App.css'
 
 function App() {
@@ -32,6 +33,14 @@ function App() {
                 element={
                   <PrivateRoute>
                     <DashboardPage />
+                  </PrivateRoute>
+                } 
+              />
+              <Route 
+                path="/shipments" 
+                element={
+                  <PrivateRoute>
+                    <ShipmentsPage />
                   </PrivateRoute>
                 } 
               />

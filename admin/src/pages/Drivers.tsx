@@ -164,7 +164,7 @@ const Drivers = () => {
       const token = localStorage.getItem('token');
       
       await axios.put(
-        `${API_URL}/api/shipments/driver/${shipmentId}/pickup`,
+        `${API_URL}/api/shipments/driver/${shipmentId}/request-pickup`,
         { notes: pickupNote },
         {
           headers: {
@@ -176,13 +176,13 @@ const Drivers = () => {
       // Refresh shipments
       fetchDriverShipments();
       setPickupNote('');
-      setActionSuccess('Package marked as picked up successfully!');
+      setActionSuccess('Pickup request sent successfully! Waiting for sender confirmation.');
       
       // Clear success message after 3 seconds
       setTimeout(() => setActionSuccess(''), 3000);
       setProcessingAction(false);
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Error updating shipment');
+      setError(err.response?.data?.message || 'Error requesting pickup');
       setProcessingAction(false);
     }
   };
