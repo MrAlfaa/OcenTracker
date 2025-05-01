@@ -4,7 +4,7 @@ import ShipmentDetails from '../components/ShipmentDetails';
 import SendShipmentForm from '../components/SendShipmentForm';
 import { Shipment } from '../types/shipment';
 import { useAuth } from '../context/AuthContext';
-import { FaSearch, FaPaperPlane, FaBoxOpen, FaSpinner, FaShippingFast } from 'react-icons/fa';
+import { FaSearch, FaPaperPlane, FaBoxOpen, FaSpinner, FaShippingFast, FaCheckCircle, FaExclamationTriangle } from 'react-icons/fa';
 import { motion, AnimatePresence } from 'framer-motion';
 
 const TrackingPage: React.FC = () => {
@@ -17,6 +17,9 @@ const TrackingPage: React.FC = () => {
   const [incomingShipments, setIncomingShipments] = useState<Shipment[]>([]);
   const [loadingIncomingShipments, setLoadingIncomingShipments] = useState<boolean>(false);
   const [incomingShipmentsError, setIncomingShipmentsError] = useState<string | null>(null);
+  const [confirmationNote, setConfirmationNote] = useState('');
+  const [confirmingDelivery, setConfirmingDelivery] = useState(false);
+  const [confirmationSuccess, setConfirmationSuccess] = useState(false);
 
   const trackShipment = async (trackingNumber: string) => {
     setLoading(true);
@@ -71,6 +74,7 @@ const TrackingPage: React.FC = () => {
     
     try {
       const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+      console.log('Fetching incoming shipments...');
       const response = await fetch(`${apiUrl}/api/shipments/incoming`, {
         headers: {
           'Content-Type': 'application/json',
@@ -84,6 +88,7 @@ const TrackingPage: React.FC = () => {
       }
       
       const data = await response.json();
+      console.log('Incoming shipments data:', data); // Debug log
       setIncomingShipments(data);
     } catch (err) {
       console.error('Error fetching incoming shipments:', err);
@@ -107,6 +112,45 @@ const TrackingPage: React.FC = () => {
       month: 'short',
       day: 'numeric'
     });
+  };
+
+  // New function to handle delivery confirmation
+  const confirmDelivery = async (shipmentId: string) => {
+    if (!isAuthenticated || !token) return;
+    
+    setConfirmingDelivery(true);
+    
+    try {
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+      const response = await fetch(`${apiUrl}/api/shipments/recipient/${shipmentId}/confirm-delivery`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-auth-token': token
+        },
+        body: JSON.stringify({ confirmationNote })
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to confirm delivery');
+      }
+      
+      // Refresh the incoming shipments
+      fetchIncomingShipments();
+      setConfirmationSuccess(true);
+      setConfirmationNote('');
+      
+      // Reset success state after some time
+      setTimeout(() => {
+        setConfirmationSuccess(false);
+      }, 5000);
+    } catch (err) {
+      console.error('Error confirming delivery:', err);
+      setIncomingShipmentsError(err instanceof Error ? err.message : 'An error occurred while confirming delivery');
+    } finally {
+      setConfirmingDelivery(false);
+    }
   };
 
   return (
@@ -325,6 +369,21 @@ const TrackingPage: React.FC = () => {
                       </div>
                     ) : (
                       <div className="space-y-6">
+                        {confirmationSuccess && (
+                          <div className="bg-green-50 border-l-4 border-green-500 p-4 rounded mb-6">
+                            <div className="flex">
+                              <div className="flex-shrink-0">
+                                <FaCheckCircle className="h-5 w-5 text-green-500" />
+                              </div>
+                              <div className="ml-3">
+                                <p className="text-sm text-green-700">
+                                  Delivery confirmed successfully! Thank you.
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+                        )}
+                        
                         {incomingShipments.map((incomingShipment) => (
                           <div key={incomingShipment._id} className="bg-white border border-gray-200 rounded-lg shadow-sm hover:shadow-md transition-shadow">
                             <div className="p-4 border-b border-gray-100 flex justify-between items-center">
@@ -337,13 +396,25 @@ const TrackingPage: React.FC = () => {
                                 </p>
                               </div>
                               <div>
-                                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                                  incomingShipment.status === 'Delivered To Recipient' 
+                                    ? 'bg-yellow-100 text-yellow-800' 
+                                    : incomingShipment.status === 'Delivery Completed'
+                                    ? 'bg-green-100 text-green-800'
+                                    : 'bg-blue-100 text-blue-800'
+                                }`}>
+                                  {incomingShipment.status === 'Delivered To Recipient' 
+                                    ? <FaExclamationTriangle className="mr-1" />
+                                    : incomingShipment.status === 'Delivery Completed'
+                                    ? <FaCheckCircle className="mr-1" />
+                                    : null
+                                  }
                                   {incomingShipment.status}
                                 </span>
                               </div>
                             </div>
-                            <div className="p-4 flex flex-col sm:flex-row sm:justify-between sm:items-center">
-                              <div className="mb-2 sm:mb-0">
+                            <div className="p-4">
+                              <div className="mb-4">
                                 <p className="text-sm text-gray-600">
                                   <span className="font-medium">Origin:</span> {incomingShipment.origin}
                                 </p>
@@ -366,7 +437,57 @@ const TrackingPage: React.FC = () => {
                                   </div>
                                 )}
                               </div>
-                              <div className="mt-4 sm:mt-0">
+                              
+                              {/* Delivery Confirmation UI - Show only if delivered but not confirmed */}
+                              {incomingShipment.status === 'Delivered To Recipient' && !incomingShipment.recipientConfirmed && (
+                                <div className="mt-4 bg-yellow-50 border border-yellow-100 rounded-lg p-4">
+                                  <h4 className="flex items-center text-md font-medium text-yellow-800 mb-2">
+                                    <FaExclamationTriangle className="text-yellow-600 mr-2" />
+                                    Delivery Confirmation Required
+                                  </h4>
+                                  <p className="text-sm text-yellow-700 mb-4">
+                                    This package has been marked as delivered to you on {incomingShipment.deliveredToRecipientAt ? formatDate(incomingShipment.deliveredToRecipientAt) : 'recently'}.
+                                    Please confirm that you have received it.
+                                  </p>
+                                  
+                                  <div className="space-y-3">
+                                    <textarea
+                                      value={confirmationNote}
+                                      onChange={(e) => setConfirmationNote(e.target.value)}
+                                      placeholder="Add notes about the delivery (optional)"
+                                      rows={2}
+                                      className="shadow-sm focus:ring-yellow-500 focus:border-yellow-500 block w-full sm:text-sm border-yellow-300 rounded-md"
+                                    />
+                                    <button
+                                      onClick={() => confirmDelivery(incomingShipment._id)}
+                                      disabled={confirmingDelivery}
+                                      className="w-full inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-yellow-600 hover:bg-yellow-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-yellow-500 disabled:opacity-50"
+                                    >
+                                      {confirmingDelivery ? (
+                                        <>
+                                          <FaSpinner className="animate-spin mr-2" />
+                                          Processing...
+                                        </>
+                                      ) : (
+                                        <>
+                                          <FaCheckCircle className="mr-2" />
+                                          Confirm Delivery
+                                        </>
+                                      )}
+                                    </button>
+                                  </div>
+                                </div>
+                              )}
+                              
+                              <div className="mt-4 flex flex-col sm:flex-row sm:justify-between sm:items-center">
+                                <div>
+                                  {incomingShipment.recipientConfirmed && (
+                                    <div className="text-green-600 text-sm flex items-center mb-3">
+                                      <FaCheckCircle className="mr-1" />
+                                      Delivery confirmed on {formatDate(incomingShipment.recipientConfirmedAt || '')}
+                                    </div>
+                                  )}
+                                </div>
                                 <button
                                   onClick={() => trackShipment(incomingShipment.trackingNumber)}
                                   className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"

@@ -43,6 +43,13 @@ export interface Shipment {
   handoverNote?: string;
   adminHandoverNote?: string;
   
+  // Delivery confirmation fields
+  deliveredToRecipient?: boolean;
+  deliveredToRecipientAt?: string;
+  recipientConfirmed?: boolean;
+  recipientConfirmationNote?: string;
+  recipientConfirmedAt?: string;
+  
   // Timestamps
   createdAt: string;
   updatedAt: string;

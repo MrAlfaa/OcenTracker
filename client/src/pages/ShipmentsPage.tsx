@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { Shipment } from '../types/shipment';
 import { Link } from 'react-router-dom';
-import { FaBox,FaExchangeAlt, FaSpinner, FaTruck, FaCheckCircle, FaTimesCircle, FaExclamationTriangle, FaShippingFast, FaMapMarkedAlt, FaPrint, FaSearch } from 'react-icons/fa';
+import { FaBox,FaExchangeAlt, FaSpinner, FaTruck, FaCheckCircle, FaTimesCircle, FaExclamationTriangle, FaShippingFast, FaMapMarkedAlt, FaPrint, FaSearch, FaEdit } from 'react-icons/fa';
 
 // Status badge component
 const StatusBadge: React.FC<{ status: string }> = ({ status }) => {
@@ -41,6 +41,14 @@ const StatusBadge: React.FC<{ status: string }> = ({ status }) => {
     case 'cancelled':
       bgColor = 'bg-red-100 text-red-800';
       icon = <FaTimesCircle className="mr-1" />;
+      break;
+    case 'delivered to recipient':
+      bgColor = 'bg-purple-100 text-purple-800';
+      icon = <FaCheckCircle className="mr-1" />;
+      break;
+    case 'delivery completed':
+      bgColor = 'bg-green-100 text-green-800';
+      icon = <FaCheckCircle className="mr-1" />;
       break;
   }
 
@@ -90,10 +98,10 @@ const ShipmentsPage: React.FC = () => {
       let statusFilter = '';
       switch (activeTab) {
         case 'ongoing':
-          statusFilter = 'Pending,In Transit,Picked Up,Delayed,Pickup Requested';
+          statusFilter = 'Pending,In Transit,Picked Up,Delayed,Pickup Requested,Delivered To Recipient';
           break;
         case 'completed':
-          statusFilter = 'Delivered';
+          statusFilter = 'Delivered,Delivery Completed';
           break;
         case 'cancelled':
           statusFilter = 'Cancelled';

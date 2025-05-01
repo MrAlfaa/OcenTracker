@@ -45,6 +45,13 @@ export interface IShipment extends Document {
   handoverRequestedAt?: Date;
   handoverNote?: string;
   adminHandoverNote?: string;
+
+  // New fields for delivery confirmation
+  deliveredToRecipient?: boolean;
+  deliveredToRecipientAt?: Date;
+  recipientConfirmed?: boolean;
+  recipientConfirmationNote?: string;
+  recipientConfirmedAt?: Date;
 }
 
 const shipmentSchema = new Schema(
@@ -58,7 +65,7 @@ const shipmentSchema = new Schema(
     status: {
       type: String,
       required: true,
-      enum: ['Pending', 'In Transit', 'Delivered', 'Delayed', 'Cancelled', 'Pickup Requested', 'Picked Up', 'Handover Requested', 'Handover Confirmed'],
+      enum: ['Pending', 'In Transit', 'Delivered', 'Delayed', 'Cancelled', 'Pickup Requested', 'Picked Up', 'Handover Requested', 'Handover Confirmed', 'Delivered To Recipient', 'Delivery Completed'],
       default: 'Pending',
     },
     origin: {
@@ -176,6 +183,26 @@ const shipmentSchema = new Schema(
     adminHandoverNote: {
       type: String,
       trim: true
+    },
+
+    // Delivery confirmation fields
+    deliveredToRecipient: {
+      type: Boolean,
+      default: false
+    },
+    deliveredToRecipientAt: {
+      type: Date
+    },
+    recipientConfirmed: {
+      type: Boolean,
+      default: false
+    },
+    recipientConfirmationNote: {
+      type: String,
+      trim: true
+    },
+    recipientConfirmedAt: {
+      type: Date
     }
   },
   { timestamps: true }

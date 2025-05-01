@@ -82,6 +82,14 @@ const StatusBadge = ({ status }: { status: string }) => {
       bgColor = 'bg-red-100 text-red-800';
       icon = <FaExclamationTriangle className="mr-1" />;
       break;
+    case 'delivered to recipient':
+      bgColor = 'bg-purple-100 text-purple-800';
+      icon = <FaCheckCircle className="mr-1" />;
+      break;
+    case 'delivery completed':
+      bgColor = 'bg-green-100 text-green-800';
+      icon = <FaCheckCircle className="mr-1" />;
+      break;
   }
 
   return (

@@ -345,7 +345,16 @@ router.put('/driver/:id/handover', authMiddleware, async (req, res) => {
 router.get('/user', authMiddleware, async (req, res) => {
   try {
     const { status } = req.query;
-    let query: any = { senderId: req.user.userID };
+    // Create a query that includes both sent and received shipments
+    let query: any = {
+      $or: [
+        { senderId: req.user.userID }, // Shipments sent by user
+        { 
+          recipientId: req.user.userID, 
+          recipientConfirmed: true    // Confirmed received shipments
+        }
+      ]
+    };
     
     // Filter by status if provided
     if (status && typeof status === 'string') {
@@ -549,17 +558,103 @@ router.get('/incoming', authMiddleware, async (req, res) => {
     const { userID } = req.user;
     
     // Find shipments where the logged-in user is the recipient
+    // Important: We need to include shipments with status "Delivered To Recipient"
     const shipments = await Shipment.find({ 
       recipientId: userID,
-      status: { $ne: 'Delivered' } // Exclude already delivered shipments
+      status: { $ne: 'Delivery Completed' } // Exclude completed deliveries only
     }).sort({ createdAt: -1 });
     
+    console.log(`Found ${shipments.length} incoming shipments for user ${userID}`);
     res.json(shipments);
   } catch (error) {
     console.error('Error fetching incoming shipments:', error);
     res.status(500).json({ 
       message: 'Server error', 
       error: error instanceof Error ? error.message : 'Unknown error' 
+    });
+  }
+});
+
+// Admin endpoint to mark shipment as delivered to recipient
+router.put('/admin/:id/deliver', authMiddleware, adminAuthMiddleware, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { location, notes } = req.body;
+    
+    const shipment = await Shipment.findById(id);
+    if (!shipment) {
+      return res.status(404).json({ message: 'Shipment not found' });
+    }
+    
+    // Update shipment status
+    shipment.status = 'Delivered To Recipient';
+    shipment.deliveredToRecipient = true;
+    shipment.deliveredToRecipientAt = new Date();
+    
+    // Add tracking event
+    shipment.trackingHistory.push({
+      status: 'Delivered To Recipient',
+      location: location || shipment.destination,
+      timestamp: new Date()
+    });
+    
+    // Add notes if provided
+    if (notes) {
+      shipment.notes = notes;
+    }
+    
+    const updatedShipment = await shipment.save();
+    res.json(updatedShipment);
+  } catch (error) {
+    console.error('Error marking shipment as delivered:', error);
+    res.status(500).json({ 
+      message: 'Server error', 
+      error: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+});
+
+// Recipient endpoint to confirm delivery
+router.put('/recipient/:id/confirm-delivery', authMiddleware, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { confirmationNote } = req.body;
+    
+    const shipment = await Shipment.findById(id);
+    if (!shipment) {
+      return res.status(404).json({ message: 'Shipment not found' });
+    }
+    
+    // Check if shipment is delivered to recipient
+    if (!shipment.deliveredToRecipient) {
+      return res.status(400).json({ message: 'Shipment has not been marked as delivered yet' });
+    }
+    
+    // Verify this shipment is for the requesting user
+    if (shipment.recipientId !== req.user.userID) {
+      return res.status(403).json({ message: 'This shipment is not addressed to you' });
+    }
+    
+    // Update shipment status
+    shipment.status = 'Delivery Completed';
+    shipment.recipientConfirmed = true;
+    shipment.recipientConfirmationNote = confirmationNote || '';
+    shipment.recipientConfirmedAt = new Date();
+    
+    // Add tracking event
+    shipment.trackingHistory.push({
+      status: 'Delivery Confirmed by Recipient',
+      location: shipment.destination,
+      timestamp: new Date()
+    });
+    
+    const updatedShipment = await shipment.save();
+    res.json(updatedShipment);
+  } catch (error) {
+    console.error('Error confirming delivery:', error);
+    res.status(500).json({ 
+      message: 'Server error', 
+      error: error instanceof Error ? error.message : 'Unknown error'
     });
   }
 });
