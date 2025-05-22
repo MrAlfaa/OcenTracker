@@ -11,6 +11,7 @@ import Login from './pages/Login'
 import AdminInitializer from './pages/AdminInitializer'
 import RoleCreation from './pages/RoleCreation'
 import Drivers from './pages/Drivers'
+import Reports from './pages/Reports'
 import './App.css'
 
 // API URL constant
@@ -263,6 +264,28 @@ function App() {
                 />
                 <main className="flex-1 overflow-x-hidden overflow-y-auto bg-gray-100 p-4">
                   <Drivers />
+                </main>
+              </div>
+            </div>
+          </RoleProtectedRoute>
+        } />
+        <Route path="/reports" element={
+          <RoleProtectedRoute allowedRoles={['admin', 'superAdmin']}>
+            <div className="flex h-screen bg-gray-100">
+              <Sidebar 
+                isOpen={sidebarOpen} 
+                isMobileOpen={isMobileMenuOpen}
+                toggleSidebar={toggleSidebar}
+                closeMobileMenu={() => setIsMobileMenuOpen(false)}
+              />
+              <div className="flex-1 flex flex-col overflow-hidden">
+                <Header 
+                  toggleSidebar={toggleSidebar} 
+                  toggleMobileMenu={toggleMobileMenu}
+                  sidebarOpen={sidebarOpen}
+                />
+                <main className="flex-1 overflow-x-hidden overflow-y-auto bg-gray-100 p-4">
+                  <Reports />
                 </main>
               </div>
             </div>

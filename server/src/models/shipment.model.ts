@@ -22,8 +22,8 @@ export interface IShipment extends Document {
   recipientId?: string;
   recipientName?: string;
   recipientEmail?: string;
-  recipientAddress?: string; // New field
-  recipientPhone?: string;   // New field
+  recipientAddress?: string;
+  recipientPhone?: string;
   itemTypes?: string[];
   branch?: string;
   notes?: string;
@@ -33,7 +33,27 @@ export interface IShipment extends Document {
   // New fields for driver assignment
   driverId?: string;
   driverName?: string;
+  
+  // Fields for pickup confirmation
+  pickupRequested?: boolean;
+  pickupConfirmed?: boolean;
+  pickupRequestedAt?: Date;
+  
+  // New fields for handover confirmation
+  handoverRequested?: boolean;
+  handoverConfirmed?: boolean;
+  handoverRequestedAt?: Date;
+  handoverNote?: string;
+  adminHandoverNote?: string;
+
+  // New fields for delivery confirmation
+  deliveredToRecipient?: boolean;
+  deliveredToRecipientAt?: Date;
+  recipientConfirmed?: boolean;
+  recipientConfirmationNote?: string;
+  recipientConfirmedAt?: Date;
 }
+
 const shipmentSchema = new Schema(
   {
     trackingNumber: {
@@ -45,7 +65,7 @@ const shipmentSchema = new Schema(
     status: {
       type: String,
       required: true,
-      enum: ['Pending', 'In Transit', 'Delivered', 'Delayed', 'Cancelled', 'Picked Up'],
+      enum: ['Pending', 'In Transit', 'Delivered', 'Delayed', 'Cancelled', 'Pickup Requested', 'Picked Up', 'Handover Requested', 'Handover Confirmed', 'Delivered To Recipient', 'Delivery Completed'],
       default: 'Pending',
     },
     origin: {
@@ -123,6 +143,67 @@ const shipmentSchema = new Schema(
       enum: ['regular', 'send', 'receive'],
       default: 'regular',
     },
+    // Driver assignment fields
+    driverId: {
+      type: String,
+      trim: true,
+    },
+    driverName: {
+      type: String,
+      trim: true,
+    },
+    // Pickup confirmation fields
+    pickupRequested: {
+      type: Boolean,
+      default: false
+    },
+    pickupConfirmed: {
+      type: Boolean,
+      default: false
+    },
+    pickupRequestedAt: {
+      type: Date
+    },
+    // Handover confirmation fields
+    handoverRequested: {
+      type: Boolean,
+      default: false
+    },
+    handoverConfirmed: {
+      type: Boolean,
+      default: false
+    },
+    handoverRequestedAt: {
+      type: Date
+    },
+    handoverNote: {
+      type: String,
+      trim: true
+    },
+    adminHandoverNote: {
+      type: String,
+      trim: true
+    },
+
+    // Delivery confirmation fields
+    deliveredToRecipient: {
+      type: Boolean,
+      default: false
+    },
+    deliveredToRecipientAt: {
+      type: Date
+    },
+    recipientConfirmed: {
+      type: Boolean,
+      default: false
+    },
+    recipientConfirmationNote: {
+      type: String,
+      trim: true
+    },
+    recipientConfirmedAt: {
+      type: Date
+    }
   },
   { timestamps: true }
 );
